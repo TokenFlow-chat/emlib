@@ -13,7 +13,7 @@
     "test": "bun test",
     "lint": "oxlint --react-plugin --deny-warnings src packages/emlib/src packages/emlib/test build.ts",
     "lint:fix": "oxlint --react-plugin --fix src packages/emlib/src packages/emlib/test build.ts",
-    "typecheck": "tsc -p tsconfig.json --noEmit && (cd packages/emlib && bun run build)",
+    "typecheck": "tsgo -p tsconfig.json --noEmit && (cd packages/emlib && bun run build)",
     "check": "bun run lint && bun run typecheck && bun run test && bun run build"
   },
   "dependencies": {
@@ -29,11 +29,11 @@
     "tailwind-merge": "^3.5.0"
   },
   "devDependencies": {
+    "@typescript/native-preview": "7.0.0-dev.20260420.1",
     "@types/bun": "latest",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "oxlint": "^1.60.0",
-    "tailwindcss": "^4.2.2",
-    "typescript": "^5.9.3"
+    "tailwindcss": "^4.2.2"
   }
 }

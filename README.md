@@ -9,6 +9,7 @@
 - `build.ts` 开启了 Bun bundler 的 `splitting`，并把 D2 保持为异步 `import()`，避免把渲染运行时塞进首屏主包
 - 增加 `lint`、`typecheck`、`check`、`test` 脚本，方便本地和 CI 做统一校验
 - 引入 `oxlint` 作为默认 lint 工具，尽量用 OXC 生态做更轻量、更快的静态检查
+- 把 `tsc` 迁移为 `tsgo`，类型检查走 TypeScript 原生 Go 预览版
 
 ## 项目结构
 
@@ -49,6 +50,16 @@ bun run lint        # 用 oxlint 做静态检查
 bun run typecheck   # 前端类型检查 + emlib build
 bun run check       # lint + typecheck + test + build
 ```
+
+## tsgo 迁移
+
+仓库现在使用官方预览包 `@typescript/native-preview`，通过 `tsgo` 代替原来的 `tsc`。
+
+- 根项目 `typecheck` 脚本已切换到 `tsgo -p tsconfig.json --noEmit`
+- `packages/emlib` 的 `build` 脚本也已切到 `tsgo -p tsconfig.json`
+- 当前固定版本是 `7.0.0-dev.20260420.1`
+
+之所以固定到具体 preview 版本，而不是使用宽松范围，是因为 `tsgo` 还在快速迭代阶段，锁版本更适合保证团队和 CI 行为一致。
 
 ## D2 加载策略
 
