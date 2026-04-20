@@ -14,12 +14,14 @@ const result = await Bun.build({
   minify: true,
   splitting: true,
   target: "browser",
-  sourcemap: "linked",
+  sourcemap: "none",
   define: {
     "process.env.NODE_ENV": JSON.stringify("production"),
   },
 });
 
 for (const output of result.outputs) {
-  console.log(` ${path.relative(process.cwd(), output.path)}  ${(output.size / 1024).toFixed(1)} KB`);
+  console.log(
+    ` ${path.relative(process.cwd(), output.path)}  ${(output.size / 1024).toFixed(1)} KB`,
+  );
 }

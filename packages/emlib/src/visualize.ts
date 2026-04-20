@@ -56,6 +56,8 @@ function exprNodeLabel(expr: Expr): string {
       return '/';
     case 'pow':
       return '^';
+    case 'eml':
+      return 'E';
     default:
       return expr.kind;
   }

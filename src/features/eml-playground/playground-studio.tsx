@@ -492,3 +492,5 @@ export function PlaygroundStudio() {
     </Card>
   );
 }
+
+export default PlaygroundStudio;
