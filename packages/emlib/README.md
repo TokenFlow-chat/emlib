@@ -8,9 +8,9 @@ A TypeScript library centered on three jobs:
 
 The core operator is:
 
-\[
-\mathrm{eml}(x,y)=\exp(x)-\ln(y)
-\]
+$$
+\mathrm{eml}(x, y) = \exp(x) - \ln(y)
+$$
 
 ## Main APIs
 

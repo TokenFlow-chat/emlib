@@ -1,93 +1,209 @@
-# EML Playground
+# EMLib: EML lib
 
-一个基于 Bun + React 19 的 EML 可视化 playground，用来把论文里的核心理论、`emlib` 的 lowering 能力，以及 D2 结构图渲染放到同一个前端界面里。
+[简体中文](./README.zh)
 
-原论文：
-`All elementary functions from a single binary operator`
-[https://arxiv.org/abs/2603.21852](https://arxiv.org/abs/2603.21852)
+EML is a research-oriented TypeScript monorepo built around the operator
 
-## 现在这版做了什么
+$$
+\mathrm{eml}(x, y) = \exp(x) - \ln(y)
+$$
 
-- 重构了 `src` 目录，把大体量的页面逻辑拆成 `overview`、表达式分析 hook、D2 预览 hook 和交互式 playground 模块
-- 删除了未接入页面的模板代码与残留资源，复制 D2 文本改成原生 Clipboard API，减少前端依赖
-- `build.ts` 开启了 Bun bundler 的 `splitting`，并把 D2 保持为异步 `import()`，避免把渲染运行时塞进首屏主包
-- 增加 `lint`、`typecheck`、`check`、`test` 脚本，方便本地和 CI 做统一校验
-- 引入 `oxlint` 作为默认 lint 工具，尽量用 OXC 生态做更轻量、更快的静态检查
-- 把 `tsc` 迁移为 `tsgo`，类型检查走 TypeScript 原生 Go 预览版
+inspired by the paper
+[*All elementary functions from a single binary operator*](https://arxiv.org/abs/2603.21852).
 
-## 项目结构
+This repository combines two parts:
 
-```text
-.
-├── src/
-│   ├── App.tsx
-│   ├── frontend.tsx
-│   ├── index.ts
-│   ├── index.css
-│   ├── components/ui/
-│   ├── features/eml-playground/
-│   │   ├── constants.ts
-│   │   ├── overview.tsx
-│   │   ├── playground-studio.tsx
-│   │   ├── use-d2-preview.ts
-│   │   ├── use-expression-analysis.ts
-│   │   └── utils.ts
-│   └── lib/utils.ts
-├── packages/
-│   └── emlib/
-└── docs/
-```
+- `packages/emlib`: a small library for parsing, lowering, rewriting, evaluating, and visualizing elementary expressions.
+- `src/`: a Bun + React 19 playground that makes the paper, the lowering pipeline, and D2-based expression diagrams explorable in one UI.
 
-## 开发命令
+The goal is not just to restate the paper. The project turns the paper's core idea into executable code, a reusable library, and a browser-based playground that helps contributors inspect what is exact, what is approximate, and where expression size grows in practice.
+
+## Why this repository exists
+
+The paper argues that a single binary operator plus a distinguished constant can generate a broad family of elementary functions. This repo exists to make that claim inspectable from three angles:
+
+- library code you can call from TypeScript
+- a visual playground you can run locally or deploy as static assets
+- documentation that explains the mathematical and engineering tradeoffs
+
+## What is implemented today
+
+### `emlib`
+
+`emlib` currently supports:
+
+- parsing and printing a compact elementary-expression AST
+- exact lowering toward pure EML trees with `reduceTypes()` / `toPureEml()`
+- token-oriented rewriting with `reduceTokens()` / `simplifyToElementary()`
+- expression metrics with `analyzeExpr()`
+- exact arithmetic for integers, rationals, and complex rationals when possible via `evaluateLossless()`
+- approximate complex evaluation via `evaluate()`
+- D2 export for expression trees via `exprToD2()`
+- a small beam-search synthesizer for pure EML candidates via `synthesizePureEml()`
+
+Supported expression families include:
+
+- arithmetic: `+`, `-`, `*`, `/`, `^`
+- constants: numeric literals, `e`, `pi`, `i`
+- core transcendental forms: `exp`, `ln`, `sqrt`, `eml` / `E`
+- trigonometric: `sin`, `cos`, `tan`, `cot`, `sec`, `csc`
+- hyperbolic: `sinh`, `cosh`, `tanh`, `coth`, `sech`, `csch`
+- inverse families: `asin`, `acos`, `atan`, `asec`, `acsc`, `acot`, `asinh`, `acosh`, `atanh`
+
+### Playground
+
+The web app currently provides:
+
+- side-by-side inspection of the original expression and its pure EML form
+- token-count and operator-type metrics for both forms
+- approximate evaluation of both forms under the same variable assignments
+- D2-based tree rendering for standard and pure forms
+- lazy loading of the D2 runtime so diagram rendering does not bloat the initial bundle
+- simple bilingual UI support inside the app
+
+## Project status
+
+This is an active exploratory codebase, but it is already usable for local experiments and collaborative iteration.
+
+What to expect:
+
+- the repo is optimized for local Bun workflows
+- `emlib` is consumed as a workspace package by the playground
+- package publishing to npm is not set up yet
+- mathematical coverage is intentionally narrower than “all possible elementary mathematics”; the README only claims what the current code and tests actually cover
+
+## Quick start
+
+### Prerequisites
+
+- [Bun](https://bun.sh/)
+
+### Install and run
 
 ```bash
 bun install
 bun run dev
 ```
 
-常用脚本：
+This starts the Bun development server defined in `src/index.ts`.
+
+### Build the static site
 
 ```bash
-bun run build       # 产出 dist
-bun run test        # 运行 emlib 测试
-bun run lint        # 用 oxlint 做静态检查
-bun run typecheck   # 前端类型检查 + emlib build
-bun run check       # lint + typecheck + test + build
+bun run build
 ```
 
-## tsgo 迁移
+Production assets are written to `dist/`.
 
-仓库现在使用官方预览包 `@typescript/native-preview`，通过 `tsgo` 代替原来的 `tsc`。
+## Common commands
 
-- 根项目 `typecheck` 脚本已切换到 `tsgo -p tsconfig.json --noEmit`
-- `packages/emlib` 的 `build` 脚本也已切到 `tsgo -p tsconfig.json`
-- 当前固定版本是 `7.0.0-dev.20260420.1`
+```bash
+bun run dev        # local dev server with HMR
+bun run build      # production build to dist/
+bun run test       # Bun tests (root + workspace tests)
+bun run lint       # oxlint over app and library sources
+bun run typecheck  # tsgo typecheck + emlib build
+bun run check      # lint + typecheck + test + build
+```
 
-之所以固定到具体 preview 版本，而不是使用宽松范围，是因为 `tsgo` 还在快速迭代阶段，锁版本更适合保证团队和 CI 行为一致。
+## Repository layout
 
-## D2 加载策略
+```text
+.
+├── docs/
+│   ├── 2603.21852v2.pdf
+│   └── eml_deep_dive.md
+├── packages/
+│   └── emlib/
+│       ├── src/
+│       ├── test/
+│       └── README.md
+├── src/
+│   ├── components/
+│   ├── features/eml-playground/
+│   ├── i18n/
+│   ├── styles/
+│   ├── App.tsx
+│   ├── frontend.tsx
+│   ├── index.html
+│   └── index.ts
+├── build.ts
+├── package.json
+└── tsconfig.json
+```
 
-当前前端对 D2 做了三层控制：
+## Using `emlib`
 
-1. 代码仍然使用 `import("@terrastruct/d2")` 异步加载
-2. 只有预览区接近视口时才真正触发运行时加载
-3. Bun 构建显式开启 `splitting`，让异步模块具备真实分包条件
+```ts
+import {
+  analyzeExpr,
+  evaluate,
+  evaluateLossless,
+  exprToD2,
+  parse,
+  reduceTokens,
+  reduceTypes,
+  toString,
+} from "emlib";
 
-如果你看到主包重新变大，优先检查两件事：
+const expr = parse("exp(x) - ln(y)");
 
-- `build.ts` 里的 `splitting: true` 有没有被改掉
-- D2 是否被改回了顶层静态 `import`
+console.log(analyzeExpr(expr));
+console.log(toString(reduceTypes(expr)));
+console.log(toString(reduceTokens(expr)));
+console.log(evaluate(expr, { x: 0.5, y: 2 }));
+console.log(evaluateLossless(parse("(1 + 2*i) / (3 - 4*i)")));
+console.log(exprToD2(expr));
+```
 
-## 依赖策略
+### Semantics and evaluation notes
 
-这个仓库尽量保持轻量：
+- Exact lowering is implemented by first desugaring extended elementary functions into a smaller core and then lowering that core into pure EML forms.
+- `evaluateLossless()` keeps rational and complex-rational arithmetic exact when possible and preserves symbolic transcendental leftovers instead of silently rounding them.
+- `evaluate()` uses approximate complex arithmetic and follows the implemented principal-branch behavior of `ln`, inverse functions, and derived identities.
 
-- 保留 Bun 原生能力来承担 dev server、build 和 test
-- UI 只保留页面实际在用到的 Radix/Tailwind 相关依赖
-- 用 `oxlint` 替代更重的 ESLint 组合，贴近 OXC 的高性能工具链思路
+## Documentation
 
-如果后续继续瘦身，建议优先检查：
+- [docs/eml_deep_dive.md](./docs/eml_deep_dive.md): a longer Chinese walkthrough of the paper and the engineering interpretation behind this repo
+- [docs/2603.21852v2.pdf](./docs/2603.21852v2.pdf): a local copy of the paper used as reference material
+- [packages/emlib/README.md](./packages/emlib/README.md): package-level notes focused on the library itself
 
-- 是否还需要额外的图标/组件库
-- 是否有可以下沉到 `packages/emlib` 的前端计算逻辑
-- 是否可以继续减少通用 UI 模板代码
+## Development notes
+
+### Tooling
+
+- Bun handles dev serving, building, and testing
+- React 19 powers the playground UI
+- `oxlint` is the default linter
+- `tsgo` from `@typescript/native-preview` is used for type checking and package builds
+
+### Frontend build strategy
+
+The app intentionally keeps the D2 runtime behind dynamic import boundaries. `build.ts` enables bundle splitting so diagram rendering stays out of the initial entry chunk unless needed.
+
+### Deployment
+
+The repository includes a GitHub Actions workflow that builds `dist/` on pushes to `main` and deploys it to GitHub Pages. The workflow is currently configured with the custom domain `eml.tokenflow.chat`.
+
+## Contributing
+
+Issues and pull requests are welcome.
+
+If you want to contribute, the most helpful workflow is:
+
+1. Install dependencies with `bun install`.
+2. Run `bun run check` before opening a PR.
+3. Keep README and docs updates aligned with the actual code and tests.
+4. Be explicit about whether a change affects mathematical semantics, UI behavior, or both.
+
+Good contribution areas include:
+
+- new exact lowering rules with tests
+- better rewrite heuristics and simplification passes
+- tighter documentation around branch cuts and evaluation semantics
+- UI improvements for inspecting large pure EML trees
+- packaging and release ergonomics for `emlib`
+
+## License
+
+This repository is licensed under [Apache License 2.0](./LICENSE).
