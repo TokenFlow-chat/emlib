@@ -1,6 +1,6 @@
 # EMLib: EML lib
 
-[简体中文](./README.zh)
+[简体中文](./README.zh.md)
 
 EML is a research-oriented TypeScript monorepo built around the operator
 
