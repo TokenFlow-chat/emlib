@@ -8,6 +8,9 @@ export interface D2ExportOptions {
   leafShape?: 'rectangle' | 'oval' | 'circle';
   includeConfig?: boolean;
   layoutEngine?: 'dagre' | 'elk';
+  direction?: 'up' | 'down' | 'right' | 'left';
+  includeFormula?: boolean;
+  formulaText?: string;
 }
 
 interface MutableD2Options {
@@ -17,6 +20,9 @@ interface MutableD2Options {
   leafShape: 'rectangle' | 'oval' | 'circle';
   includeConfig: boolean;
   layoutEngine: 'dagre' | 'elk';
+  direction: 'up' | 'down' | 'right' | 'left';
+  includeFormula: boolean;
+  formulaText: string;
 }
 
 interface D2State {
@@ -30,8 +36,11 @@ const defaultOptions: MutableD2Options = {
   edgeLabels: true,
   operatorShape: 'circle',
   leafShape: 'rectangle',
-  includeConfig: false,
+  includeConfig: true,
   layoutEngine: 'dagre',
+  direction: 'right',
+  includeFormula: true,
+  formulaText: '\mathrm{eml}(x,y)=\exp(x)-\ln(y)',
 };
 
 function withDefaults(options: D2ExportOptions = {}): MutableD2Options {
@@ -103,8 +112,8 @@ function renderExprTree(expr: Expr, state: D2State, options: MutableD2Options): 
     case 'pow': {
       const leftId = renderExprTree(expr.left, state, options);
       const rightId = renderExprTree(expr.right, state, options);
-      pushEdge(state, id, leftId, options.edgeLabels ? 'L' : null);
-      pushEdge(state, id, rightId, options.edgeLabels ? 'R' : null);
+      pushEdge(state, id, leftId, options.edgeLabels ? 'x' : null);
+      pushEdge(state, id, rightId, options.edgeLabels ? 'y' : null);
       break;
     }
     case 'neg':
@@ -168,8 +177,8 @@ function renderPureEmlTree(expr: Expr, state: D2State, options: MutableD2Options
     pushNode(state, id, 'eml', options.operatorShape);
     const leftId = renderPureEmlTree(expr.left, state, options);
     const rightId = renderPureEmlTree(expr.right, state, options);
-    pushEdge(state, id, leftId, options.edgeLabels ? 'L' : null);
-    pushEdge(state, id, rightId, options.edgeLabels ? 'R' : null);
+    pushEdge(state, id, leftId, options.edgeLabels ? 'x' : null);
+    pushEdge(state, id, rightId, options.edgeLabels ? 'y' : null);
     return id;
   }
 
@@ -180,6 +189,8 @@ function renderPureEmlTree(expr: Expr, state: D2State, options: MutableD2Options
 
 function finalizeD2(state: D2State, options: MutableD2Options): string {
   const lines: string[] = [];
+  lines.push(`direction: ${options.direction}`);
+  lines.push('');
   if (options.includeConfig) {
     lines.push('vars: {');
     lines.push('  d2-config: {');
@@ -193,6 +204,18 @@ function finalizeD2(state: D2State, options: MutableD2Options): string {
     lines.push('');
   }
   lines.push(...state.edges);
+  if ((state.nodes.length > 0 || state.edges.length > 0) && options.includeFormula) {
+    lines.push('');
+  }
+  if (options.includeFormula) {
+    lines.push('eml_formula: {');
+    lines.push('  shape: text');
+    lines.push('  near: top-left');
+    lines.push('  label: |tex');
+    lines.push(`    ${options.formulaText}`);
+    lines.push('  |');
+    lines.push('}');
+  }
   return lines.join('\n');
 }
 

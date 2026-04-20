@@ -70,13 +70,16 @@ test('lossless arithmetic keeps exact rational and complex values', () => {
 test('exprToD2 exports a labeled expression tree in D2 syntax', () => {
   const d2 = exprToD2(parse('exp(x) - ln(y)'), { includeConfig: true });
   expect(d2).toContain('layout-engine: dagre');
+  expect(d2).toContain('direction: right');
+  expect(d2).toContain('near: top-left');
+  expect(d2).toContain('\mathrm{eml}(x,y)=\exp(x)-\ln(y)');
   expect(d2).toContain('label: "-"');
   expect(d2).toContain('label: "exp"');
   expect(d2).toContain('label: "ln"');
   expect(d2).toContain('label: "x"');
   expect(d2).toContain('label: "y"');
-  expect(d2).toContain(': "L"');
-  expect(d2).toContain(': "R"');
+  expect(d2).toContain(': "x"');
+  expect(d2).toContain(': "y"');
 });
 
 test('pureEmlTreeToD2 exports a strict eml binary tree', () => {
