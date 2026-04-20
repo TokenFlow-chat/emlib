@@ -158,7 +158,7 @@ export function parse(input: string): Expr {
       if ((tok as Token).kind === 'op' && tok.value === '(') {
         eat('op', '(');
         const a = parseExpr();
-        if (name === 'eml') {
+        if (name === 'eml' || name === 'E') {
           eat('op', ',');
           const b = parseExpr();
           eat('op', ')');

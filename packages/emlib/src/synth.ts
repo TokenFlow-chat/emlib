@@ -1,6 +1,6 @@
 import type { Expr } from './ast';
 import { eml, num, variable } from './ast';
-import { evaluate } from './eval';
+import { evaluate } from './evaluator';
 import { toString } from './print';
 
 export interface SampleEnv {
@@ -23,18 +23,6 @@ export interface SynthResult {
 
 interface Candidate extends SynthResult {
   values: number[];
-}
-
-function leafCount(expr: Expr): number {
-  switch (expr.kind) {
-    case 'num':
-    case 'var':
-      return 1;
-    case 'eml':
-      return leafCount(expr.left) + leafCount(expr.right);
-    default:
-      throw new Error('synth only works with pure EML candidates');
-  }
 }
 
 function metric(a: number[], b: number[]): number {

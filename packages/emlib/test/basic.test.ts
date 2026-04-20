@@ -28,8 +28,8 @@ test('simplify pure eml back to ln(x)', () => {
   expect(toString(simplified)).toBe('ln(x)');
 });
 
-test('toPureEml uses the direct eml(x, y) form for exp(x) - ln(y)', () => {
-  expect(toString(toPureEml(parse('exp(x) - ln(y)')))).toBe('eml(x, y)');
+test('toPureEml uses the direct E(x,y) form for exp(x) - ln(y)', () => {
+  expect(toString(toPureEml(parse('exp(x) - ln(y)')))).toBe('E(x,y)');
 });
 
 test('toPureEml applies simple algebraic and inverse cancellations before lowering', () => {
@@ -53,16 +53,16 @@ test('reduceTypes keeps only the EML core and chooses shorter direct forms when 
 test('reduceTokens prefers the shorter mixed vocabulary form', () => {
   const expr = parse('exp(x) - ln(y)');
   const reduced = reduceTokens(expr);
-  expect(toString(reduced)).toBe('eml(x, y)');
+  expect(toString(reduced)).toBe('E(x,y)');
   expect(analyzeExpr(reduced).tokenCount).toBeLessThan(analyzeExpr(expr).tokenCount);
 });
 
 test('lossless arithmetic keeps exact rational and complex values', () => {
   const rational = evaluateLossless(parse('1/3 + 1/6'));
-  expect(toString(valueToExpr(rational))).toBe('1 / 2');
+  expect(toString(valueToExpr(rational))).toBe('1/2');
 
   const complex = evaluateLossless(parse('(1 + 2*i) / (3 - 4*i)'));
-  expect(toString(valueToExpr(complex))).toBe('-1 / 5 + 2 / 5 * i');
+  expect(toString(valueToExpr(complex))).toBe('-1/5+2/5*i');
 });
 
 test('synthesis returns a finite candidate', () => {

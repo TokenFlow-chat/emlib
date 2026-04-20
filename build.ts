@@ -12,6 +12,7 @@ const result = await Bun.build({
   outdir,
   plugins: [tailwind],
   minify: true,
+  splitting: true,
   target: "browser",
   sourcemap: "linked",
   define: {

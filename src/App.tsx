@@ -1,38 +1,21 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { APITester } from "./APITester";
+import { PlaygroundStudio } from "@/features/eml-playground/playground-studio";
+import {
+  HeroPanel,
+  HighlightsGrid,
+  SummaryPanels,
+} from "@/features/eml-playground/overview";
 import "./index.css";
-
-import logo from "./logo.svg";
-import reactLogo from "./react.svg";
 
 export function App() {
   return (
-    <div className="container mx-auto p-8 text-center relative z-10">
-      <div className="flex justify-center items-center gap-8 mb-8">
-        <img
-          src={logo}
-          alt="Bun Logo"
-          className="h-36 p-6 transition-all duration-300 hover:drop-shadow-[0_0_2em_#646cffaa] scale-120"
-        />
-        <img
-          src={reactLogo}
-          alt="React Logo"
-          className="h-36 p-6 transition-all duration-300 hover:drop-shadow-[0_0_2em_#61dafbaa] [animation:spin_20s_linear_infinite]"
-        />
-      </div>
-      <Card>
-        <CardHeader className="gap-4">
-          <CardTitle className="text-3xl font-bold">Bun + React</CardTitle>
-          <CardDescription>
-            Edit <code className="rounded bg-muted px-[0.3rem] py-[0.2rem] font-mono">src/App.tsx</code> and save to
-            test HMR
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <APITester />
-        </CardContent>
-      </Card>
-    </div>
+    <main className="relative overflow-x-clip">
+      <section className="mx-auto flex min-h-screen w-full max-w-[1480px] flex-col gap-5 px-3 py-3 sm:px-4 sm:py-4 lg:gap-6 lg:px-6 lg:py-6">
+        <HeroPanel />
+        <HighlightsGrid />
+        <SummaryPanels />
+        <PlaygroundStudio />
+      </section>
+    </main>
   );
 }
 

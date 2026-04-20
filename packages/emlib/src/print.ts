@@ -76,7 +76,7 @@ export function toString(expr: Expr, parentPrec = 0): string {
     case 'atanh':
       return `${expr.kind}(${toString(expr.value)})`;
     case 'eml':
-      return `eml(${toString(expr.left)}, ${toString(expr.right)})`;
+      return `E(${toString(expr.left)},${toString(expr.right)})`;
     case 'add':
     case 'sub':
     case 'mul':
@@ -85,7 +85,7 @@ export function toString(expr: Expr, parentPrec = 0): string {
       const opMap: Record<'add'|'sub'|'mul'|'div'|'pow', string> = { add: '+', sub: '-', mul: '*', div: '/', pow: '^' };
       const op = opMap[expr.kind];
       const prec = PREC[expr.kind];
-      const s = `${toString(expr.left, prec)} ${op} ${toString(expr.right, prec + (expr.kind === 'pow' ? -1 : 1))}`;
+      const s = `${toString(expr.left, prec)}${op}${toString(expr.right, prec + (expr.kind === 'pow' ? -1 : 1))}`;
       return parentPrec > prec ? `(${s})` : s;
     }
   }
@@ -101,7 +101,7 @@ export function toPureEmlString(expr: Expr): string {
     case 'const':
       return expr.name;
     case 'eml':
-      return `eml(${toPureEmlString(expr.left)},${toPureEmlString(expr.right)})`;
+      return `E(${toPureEmlString(expr.left)},${toPureEmlString(expr.right)})`;
     default:
       throw new Error(`Expression is not pure EML: ${toString(expr)}`);
   }

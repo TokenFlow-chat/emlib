@@ -10,7 +10,7 @@ function expectComplexClose(expr: string, env: Record<string, number>) {
 
 test('lower exp(x) to the paper core EML form and simplify it back', () => {
   const expr = toPureEml(parse('exp(x)'));
-  expect(toString(expr)).toBe('eml(x, 1)');
+  expect(toString(expr)).toBe('E(x,1)');
   const simplified = simplifyToElementary(expr);
   expect(toString(simplified)).toBe('exp(x)');
 });
@@ -83,7 +83,7 @@ test('lower derived reciprocal/inverse variants and constants', () => {
 
 test('lossless mode keeps transcendental values symbolic instead of silently rounding them', () => {
   const symbolic = evaluateLossless(parse('sin(1/3)'));
-  expect(toString(valueToExpr(symbolic))).toBe('sin(1 / 3)');
+  expect(toString(valueToExpr(symbolic))).toBe('sin(1/3)');
 
   const approx = evaluate(parse('sin(1/3)'));
   expect(approx.re).toBeCloseTo(Math.sin(1 / 3), 12);
