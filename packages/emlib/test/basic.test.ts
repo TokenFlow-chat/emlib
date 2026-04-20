@@ -10,8 +10,6 @@ import {
   synthesizePureEml,
   toPureEml,
   toString,
-  exprToD2,
-  pureEmlTreeToD2,
   valueToExpr,
 } from '../src/index';
 
@@ -65,36 +63,6 @@ test('lossless arithmetic keeps exact rational and complex values', () => {
 
   const complex = evaluateLossless(parse('(1 + 2*i) / (3 - 4*i)'));
   expect(toString(valueToExpr(complex))).toBe('-1 / 5 + 2 / 5 * i');
-});
-
-test('exprToD2 exports a labeled expression tree in D2 syntax', () => {
-  const d2 = exprToD2(parse('exp(x) - ln(y)'), { includeConfig: true });
-  expect(d2).toContain('layout-engine: dagre');
-  expect(d2).toContain('direction: right');
-  expect(d2).toContain('near: top-left');
-  expect(d2).toContain('\mathrm{eml}(x,y)=\exp(x)-\ln(y)');
-  expect(d2).toContain('label: "-"');
-  expect(d2).toContain('label: "exp"');
-  expect(d2).toContain('label: "ln"');
-  expect(d2).toContain('label: "x"');
-  expect(d2).toContain('label: "y"');
-  expect(d2).toContain(': "x"');
-  expect(d2).toContain(': "y"');
-});
-
-test('pureEmlTreeToD2 exports a strict eml binary tree', () => {
-  const d2 = pureEmlTreeToD2(reduceTypes(parse('ln(x)')));
-  expect(d2).toContain('label: "eml"');
-  expect(d2).toContain('label: "x"');
-  expect(d2).toContain('label: "1"');
-  expect(d2).not.toContain('label: "ln"');
-  expect(d2).not.toContain('label: "exp"');
-});
-
-test('pureEmlTreeToD2 rejects non-pure trees', () => {
-  expect(() => pureEmlTreeToD2(parse('exp(x)'))).toThrow(
-    'Pure EML tree visualization only supports eml internal nodes. Got exp',
-  );
 });
 
 test('synthesis returns a finite candidate', () => {

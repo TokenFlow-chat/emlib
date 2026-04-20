@@ -1,28 +1,8 @@
 import type { Expr } from './ast';
-import { isNumericValue } from './ast';
 
 export interface D2ExportOptions {
   nodePrefix?: string;
   edgeLabels?: boolean;
-  operatorShape?: 'circle' | 'hexagon' | 'diamond' | 'rectangle';
-  leafShape?: 'rectangle' | 'oval' | 'circle';
-  includeConfig?: boolean;
-  layoutEngine?: 'dagre' | 'elk';
-  direction?: 'up' | 'down' | 'right' | 'left';
-  includeFormula?: boolean;
-  formulaText?: string;
-}
-
-interface MutableD2Options {
-  nodePrefix: string;
-  edgeLabels: boolean;
-  operatorShape: 'circle' | 'hexagon' | 'diamond' | 'rectangle';
-  leafShape: 'rectangle' | 'oval' | 'circle';
-  includeConfig: boolean;
-  layoutEngine: 'dagre' | 'elk';
-  direction: 'up' | 'down' | 'right' | 'left';
-  includeFormula: boolean;
-  formulaText: string;
 }
 
 interface D2State {
@@ -31,21 +11,7 @@ interface D2State {
   edges: string[];
 }
 
-const defaultOptions: MutableD2Options = {
-  nodePrefix: 'n',
-  edgeLabels: true,
-  operatorShape: 'circle',
-  leafShape: 'rectangle',
-  includeConfig: true,
-  layoutEngine: 'dagre',
-  direction: 'right',
-  includeFormula: true,
-  formulaText: '\mathrm{eml}(x,y)=\exp(x)-\ln(y)',
-};
-
-function withDefaults(options: D2ExportOptions = {}): MutableD2Options {
-  return { ...defaultOptions, ...options };
-}
+type D2NodeClass = 'function' | 'variable' | 'constant';
 
 function escapeD2String(value: string): string {
   return JSON.stringify(value);
@@ -57,11 +23,11 @@ function nextNodeId(state: D2State, prefix: string): string {
   return id;
 }
 
-function pushNode(state: D2State, id: string, label: string, shape: string) {
+function pushNode(state: D2State, id: string, className: D2NodeClass, label: string) {
   state.nodes.push(`${id}: {`);
   state.nodes.push(`  label: ${escapeD2String(label)}`);
-  state.nodes.push(`  shape: ${shape}`);
-  state.nodes.push(`}`);
+  state.nodes.push(`  class: ${className}`);
+  state.nodes.push('}');
 }
 
 function pushEdge(state: D2State, from: string, to: string, label: string | null) {
@@ -95,13 +61,22 @@ function exprNodeLabel(expr: Expr): string {
   }
 }
 
-function isLeaf(expr: Expr): boolean {
-  return expr.kind === 'num' || expr.kind === 'var' || expr.kind === 'const';
+function nodeVisual(expr: Expr): { className: D2NodeClass; label: string } {
+  switch (expr.kind) {
+    case 'num':
+    case 'const':
+      return { className: 'constant', label: exprNodeLabel(expr) };
+    case 'var':
+      return { className: 'variable', label: expr.name };
+    default:
+      return { className: 'function', label: exprNodeLabel(expr) };
+  }
 }
 
-function renderExprTree(expr: Expr, state: D2State, options: MutableD2Options): string {
-  const id = nextNodeId(state, options.nodePrefix);
-  pushNode(state, id, exprNodeLabel(expr), isLeaf(expr) ? options.leafShape : options.operatorShape);
+function renderExprTree(expr: Expr, state: D2State, nodePrefix: string, edgeLabels: boolean): string {
+  const id = nextNodeId(state, nodePrefix);
+  const visual = nodeVisual(expr);
+  pushNode(state, id, visual.className, visual.label);
 
   switch (expr.kind) {
     case 'eml':
@@ -110,10 +85,10 @@ function renderExprTree(expr: Expr, state: D2State, options: MutableD2Options): 
     case 'mul':
     case 'div':
     case 'pow': {
-      const leftId = renderExprTree(expr.left, state, options);
-      const rightId = renderExprTree(expr.right, state, options);
-      pushEdge(state, id, leftId, options.edgeLabels ? 'x' : null);
-      pushEdge(state, id, rightId, options.edgeLabels ? 'y' : null);
+      const leftId = renderExprTree(expr.left, state, nodePrefix, edgeLabels);
+      const rightId = renderExprTree(expr.right, state, nodePrefix, edgeLabels);
+      pushEdge(state, id, leftId, edgeLabels ? 'x' : null);
+      pushEdge(state, id, rightId, edgeLabels ? 'y' : null);
       break;
     }
     case 'neg':
@@ -141,8 +116,8 @@ function renderExprTree(expr: Expr, state: D2State, options: MutableD2Options): 
     case 'asinh':
     case 'acosh':
     case 'atanh': {
-      const childId = renderExprTree(expr.value, state, options);
-      pushEdge(state, id, childId, options.edgeLabels ? 'arg' : null);
+      const childId = renderExprTree(expr.value, state, nodePrefix, edgeLabels);
+      pushEdge(state, id, childId, edgeLabels ? 'arg' : null);
       break;
     }
     default:
@@ -152,51 +127,35 @@ function renderExprTree(expr: Expr, state: D2State, options: MutableD2Options): 
   return id;
 }
 
-function assertPureEmlTree(expr: Expr): void {
-  switch (expr.kind) {
-    case 'eml':
-      assertPureEmlTree(expr.left);
-      assertPureEmlTree(expr.right);
-      return;
-    case 'var':
-      return;
-    case 'num':
-      if (!isNumericValue(expr, 1)) {
-        throw new Error(`Pure EML tree visualization expects leaves to be variables or 1. Got ${expr.raw}`);
-      }
-      return;
-    default:
-      throw new Error(`Pure EML tree visualization only supports eml internal nodes. Got ${expr.kind}`);
-  }
+function renderClassDefinitions(): string[] {
+  return [
+    'classes: {',
+    '  function: {',
+    '    shape: circle',
+    '    style: {',
+    '      fill-pattern: none',
+    '    }',
+    '  }',
+    '  variable: {',
+    '    shape: square',
+    '    style: {',
+    '      fill-pattern: lines',
+    '    }',
+    '  }',
+    '  constant: {',
+    '    shape: square',
+    '    style: {',
+    '      fill-pattern: dots',
+    '    }',
+    '  }',
+    '}',
+  ];
 }
 
-function renderPureEmlTree(expr: Expr, state: D2State, options: MutableD2Options): string {
-  const id = nextNodeId(state, options.nodePrefix);
-
-  if (expr.kind === 'eml') {
-    pushNode(state, id, 'eml', options.operatorShape);
-    const leftId = renderPureEmlTree(expr.left, state, options);
-    const rightId = renderPureEmlTree(expr.right, state, options);
-    pushEdge(state, id, leftId, options.edgeLabels ? 'x' : null);
-    pushEdge(state, id, rightId, options.edgeLabels ? 'y' : null);
-    return id;
-  }
-
-  const label = expr.kind === 'var' ? expr.name : '1';
-  pushNode(state, id, label, options.leafShape);
-  return id;
-}
-
-function finalizeD2(state: D2State, options: MutableD2Options): string {
+function finalizeD2(state: D2State): string {
   const lines: string[] = [];
-  lines.push(`direction: ${options.direction}`);
-  lines.push('');
-  if (options.includeConfig) {
-    lines.push('vars: {');
-    lines.push('  d2-config: {');
-    lines.push(`    layout-engine: ${options.layoutEngine}`);
-    lines.push('  }');
-    lines.push('}');
+  lines.push(...renderClassDefinitions());
+  if (state.nodes.length > 0 || state.edges.length > 0) {
     lines.push('');
   }
   lines.push(...state.nodes);
@@ -204,32 +163,12 @@ function finalizeD2(state: D2State, options: MutableD2Options): string {
     lines.push('');
   }
   lines.push(...state.edges);
-  if ((state.nodes.length > 0 || state.edges.length > 0) && options.includeFormula) {
-    lines.push('');
-  }
-  if (options.includeFormula) {
-    lines.push('eml_formula: {');
-    lines.push('  shape: text');
-    lines.push('  near: top-left');
-    lines.push('  label: |tex');
-    lines.push(`    ${options.formulaText}`);
-    lines.push('  |');
-    lines.push('}');
-  }
   return lines.join('\n');
 }
 
 export function exprToD2(expr: Expr, options: D2ExportOptions = {}): string {
-  const resolved = withDefaults(options);
+  const { nodePrefix = 'n', edgeLabels = true } = options;
   const state: D2State = { nextId: 0, nodes: [], edges: [] };
-  renderExprTree(expr, state, resolved);
-  return finalizeD2(state, resolved);
-}
-
-export function pureEmlTreeToD2(expr: Expr, options: D2ExportOptions = {}): string {
-  assertPureEmlTree(expr);
-  const resolved = withDefaults(options);
-  const state: D2State = { nextId: 0, nodes: [], edges: [] };
-  renderPureEmlTree(expr, state, resolved);
-  return finalizeD2(state, resolved);
+  renderExprTree(expr, state, nodePrefix, edgeLabels);
+  return finalizeD2(state);
 }

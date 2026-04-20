@@ -20,8 +20,7 @@ The core operator is:
 - `analyzeExpr(expr)` reports `tokenCount`, `typeCount`, and the type set
 - `evaluateLossless(expr, env?)` performs exact arithmetic for integers, rationals, and complex rationals; transcendental leftovers stay symbolic
 - `evaluate(expr, env?)` performs approximate complex evaluation
-- `exprToD2(expr)` exports a general expression tree as D2 text
-- `pureEmlTreeToD2(expr)` exports a strict binary tree whose internal nodes are only `eml` and whose leaves are variables or `1`
+- `exprToD2(expr)` exports a D2 expression tree using three visual node categories: function, variable, and constant
 
 Compatibility exports are still present:
 
@@ -63,10 +62,10 @@ console.log(toString(reduceTokens(expr)));
 // eml(x, y)
 
 console.log(exprToD2(expr));
-// D2 source for the ordinary expression tree
+// D2 source with function / variable / constant node classes
 
-console.log(pureEmlTreeToD2(reduceTypes(parse('ln(x)'))));
-// D2 source for the pure eml binary tree
+console.log(exprToD2(reduceTypes(parse('ln(x)'))));
+// reduced trees use the same generic D2 visualization
 
 console.log(toString(valueToExpr(evaluateLossless(parse('(1+2*i)/(3-4*i)')))));
 // -1 / 5 + 2 / 5 * i
