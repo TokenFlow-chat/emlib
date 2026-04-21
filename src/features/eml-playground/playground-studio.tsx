@@ -11,13 +11,7 @@ import {
   trainMasterFormula,
   type CompressionLevel,
 } from "emlib";
-import {
-  type ReactNode,
-  startTransition,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import { type ReactNode, startTransition, useEffect, useMemo, useState } from "react";
 import {
   LuArrowRight,
   LuBrain,
@@ -46,10 +40,7 @@ import {
   type LayoutMode,
   type MasterPresetId,
 } from "@/features/eml-playground/constants";
-import {
-  useD2Preview,
-  usePreviewActivation,
-} from "@/features/eml-playground/use-d2-preview";
+import { useD2Preview, usePreviewActivation } from "@/features/eml-playground/use-d2-preview";
 import {
   type ExpressionTransform,
   useExpressionAnalysis,
@@ -65,13 +56,7 @@ import {
   withTransparentD2Background,
 } from "@/features/eml-playground/utils";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -183,9 +168,7 @@ function StatPill({ label, value }: { label: string; value: string }) {
       <div className="text-[11px] font-semibold tracking-[0.16em] text-[color:var(--ink-soft)] uppercase">
         {label}
       </div>
-      <div className="mt-1 text-sm font-semibold text-[color:var(--ink)]">
-        {value}
-      </div>
+      <div className="mt-1 text-sm font-semibold text-[color:var(--ink)]">{value}</div>
     </div>
   );
 }
@@ -213,17 +196,13 @@ function MetricCard({
           <div className="text-3xl font-semibold text-[color:var(--ink)]">
             {formatNumber(tokenCount)}
           </div>
-          <div className="text-sm text-[color:var(--ink-soft)]">
-            {tokenNodeLabel}
-          </div>
+          <div className="text-sm text-[color:var(--ink-soft)]">{tokenNodeLabel}</div>
         </div>
         <div>
           <div className="text-3xl font-semibold text-[color:var(--ink)]">
             {formatNumber(typeCount)}
           </div>
-          <div className="text-sm text-[color:var(--ink-soft)]">
-            {operatorTypeLabel}
-          </div>
+          <div className="text-sm text-[color:var(--ink-soft)]">{operatorTypeLabel}</div>
         </div>
       </div>
     </div>
@@ -272,12 +251,8 @@ function ResultCard({
           <div className="text-[11px] font-semibold tracking-[0.18em] text-[color:var(--ink-soft)] uppercase">
             {apiLabel}
           </div>
-          <div className="mt-1 text-lg font-semibold text-[color:var(--ink)]">
-            {title}
-          </div>
-          <p className="mt-1 text-sm leading-6 text-[color:var(--ink-soft)]">
-            {description}
-          </p>
+          <div className="mt-1 text-lg font-semibold text-[color:var(--ink)]">{title}</div>
+          <p className="mt-1 text-sm leading-6 text-[color:var(--ink-soft)]">{description}</p>
         </div>
         <Button
           type="button"
@@ -299,22 +274,13 @@ function ResultCard({
       </pre>
 
       <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-        <StatPill
-          label="Nodes"
-          value={formatNumber(transform.metrics.tokenCount)}
-        />
-        <StatPill
-          label="Operators"
-          value={formatNumber(transform.metrics.typeCount)}
-        />
+        <StatPill label="Nodes" value={formatNumber(transform.metrics.tokenCount)} />
+        <StatPill label="Operators" value={formatNumber(transform.metrics.typeCount)} />
         <StatPill
           label={deltaLabel}
           value={`${formatSignedDelta(tokenDelta)} / ${formatSignedDelta(typeDelta)}`}
         />
-        <StatPill
-          label={typesLabel}
-          value={formatTypeSet(transform.metrics.types)}
-        />
+        <StatPill label={typesLabel} value={formatTypeSet(transform.metrics.types)} />
       </div>
     </div>
   );
@@ -343,12 +309,8 @@ function ExperimentShell({
           <div className="text-[11px] font-semibold tracking-[0.18em] text-[color:var(--ink-soft)] uppercase">
             {eyebrow}
           </div>
-          <div className="mt-1 text-lg font-semibold text-[color:var(--ink)]">
-            {title}
-          </div>
-          <p className="mt-1 text-sm leading-6 text-[color:var(--ink-soft)]">
-            {description}
-          </p>
+          <div className="mt-1 text-lg font-semibold text-[color:var(--ink)]">{title}</div>
+          <p className="mt-1 text-sm leading-6 text-[color:var(--ink-soft)]">{description}</p>
         </div>
       </div>
       <div className="mt-4 space-y-4">{children}</div>
@@ -371,9 +333,7 @@ function AsyncMessage({
         : "border-[color:var(--line)] bg-[color:var(--paper-strong)] text-[color:var(--ink-soft)]";
 
   return (
-    <div
-      className={`rounded-[0.85rem] border px-4 py-3 text-sm leading-6 ${className}`}
-    >
+    <div className={`rounded-[0.85rem] border px-4 py-3 text-sm leading-6 ${className}`}>
       {children}
     </div>
   );
@@ -394,32 +354,18 @@ export function PlaygroundStudio() {
     x: "0.5",
     y: "2",
   });
-  const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">(
-    "idle",
-  );
-  const [compressionMode, setCompressionMode] = useState<CompressionMode>(
-    DEFAULT_COMPRESSION_MODE,
-  );
-  const [compressionState, setCompressionState] = useState<
-    AsyncState<CompressionDemoResult>
-  >({
+  const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">("idle");
+  const [compressionMode, setCompressionMode] = useState<CompressionMode>(DEFAULT_COMPRESSION_MODE);
+  const [compressionState, setCompressionState] = useState<AsyncState<CompressionDemoResult>>({
     status: "idle",
   });
   const [synthTarget, setSynthTarget] = useState(DEFAULT_SYNTH_TARGET);
-  const [synthMaxLeaves, setSynthMaxLeaves] = useState(
-    DEFAULT_SYNTH_MAX_LEAVES,
-  );
-  const [synthBeamWidth, setSynthBeamWidth] = useState(
-    DEFAULT_SYNTH_BEAM_WIDTH,
-  );
-  const [synthesisState, setSynthesisState] = useState<
-    AsyncState<SynthesisDemoResult>
-  >({
+  const [synthMaxLeaves, setSynthMaxLeaves] = useState(DEFAULT_SYNTH_MAX_LEAVES);
+  const [synthBeamWidth, setSynthBeamWidth] = useState(DEFAULT_SYNTH_BEAM_WIDTH);
+  const [synthesisState, setSynthesisState] = useState<AsyncState<SynthesisDemoResult>>({
     status: "idle",
   });
-  const [masterPresetId, setMasterPresetId] = useState<MasterPresetId>(
-    DEFAULT_MASTER_PRESET,
-  );
+  const [masterPresetId, setMasterPresetId] = useState<MasterPresetId>(DEFAULT_MASTER_PRESET);
   const [masterState, setMasterState] = useState<AsyncState<MasterDemoResult>>({
     status: "idle",
   });
@@ -427,10 +373,7 @@ export function PlaygroundStudio() {
   const analysisState = useExpressionAnalysis(expression, envValues);
   const previewActivation = usePreviewActivation<HTMLDivElement>();
   const masterPreset = MASTER_PRESETS[masterPresetId];
-  const masterTree = useMemo(
-    () => createMasterTree(masterPreset.depth),
-    [masterPreset.depth],
-  );
+  const masterTree = useMemo(() => createMasterTree(masterPreset.depth), [masterPreset.depth]);
 
   useEffect(() => {
     if (!analysisState.ok) return;
@@ -504,8 +447,7 @@ export function PlaygroundStudio() {
   }, [analysisState, messages]);
 
   const selectedView =
-    expressionViews.find((view) => view.key === diagramSource) ??
-    expressionViews[0];
+    expressionViews.find((view) => view.key === diagramSource) ?? expressionViews[0];
   const previewMode = selectedView?.key === "pure" ? "pure" : "standard";
 
   const diagramPayload = useMemo(() => {
@@ -517,9 +459,7 @@ export function PlaygroundStudio() {
       };
     }
 
-    const d2Source = withTransparentD2Background(
-      exprToD2(selectedView.transform.expr),
-    );
+    const d2Source = withTransparentD2Background(exprToD2(selectedView.transform.expr));
 
     if (selectedView.transform.metrics.tokenCount > PURE_RENDER_LIMIT) {
       return {
@@ -659,9 +599,7 @@ export function PlaygroundStudio() {
     try {
       const targetExpr = parse(masterPreset.expr);
       const samples = masterPreset.sampleXs.map((value) => C(value, 0));
-      const targets = masterPreset.sampleXs.map((value) =>
-        evaluate(targetExpr, { x: value }),
-      );
+      const targets = masterPreset.sampleXs.map((value) => evaluate(targetExpr, { x: value }));
       const result = trainMasterFormula(samples, targets, masterPreset.options);
 
       setMasterState({
@@ -725,10 +663,7 @@ export function PlaygroundStudio() {
               </div>
 
               <div className="mt-5 space-y-2">
-                <Label
-                  htmlFor="expression-input"
-                  className="text-[color:var(--ink)]"
-                >
+                <Label htmlFor="expression-input" className="text-[color:var(--ink)]">
                   {messages.playground.expression.label}
                 </Label>
                 <Textarea
@@ -751,28 +686,20 @@ export function PlaygroundStudio() {
                 </Label>
                 <Select
                   value={diagramSource}
-                  onValueChange={(value) =>
-                    setDiagramSource(value as DiagramSource)
-                  }
+                  onValueChange={(value) => setDiagramSource(value as DiagramSource)}
                 >
                   <SelectTrigger className="w-full min-w-0 rounded-[0.8rem] border-[color:var(--line)] bg-[color:var(--paper-strong)]">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="standard">
-                      {
-                        messages.playground.controls.diagramSourceOptions
-                          .standard
-                      }
+                      {messages.playground.controls.diagramSourceOptions.standard}
                     </SelectItem>
                     <SelectItem value="pure">
                       {messages.playground.controls.diagramSourceOptions.pure}
                     </SelectItem>
                     <SelectItem value="shortest">
-                      {
-                        messages.playground.controls.diagramSourceOptions
-                          .shortest
-                      }
+                      {messages.playground.controls.diagramSourceOptions.shortest}
                     </SelectItem>
                     <SelectItem value="lifted">
                       {messages.playground.controls.diagramSourceOptions.lifted}
@@ -813,9 +740,7 @@ export function PlaygroundStudio() {
                     tokenCount={analysisState.standard.metrics.tokenCount}
                     typeCount={analysisState.standard.metrics.typeCount}
                     tokenNodeLabel={messages.playground.metrics.tokenNodeLabel}
-                    operatorTypeLabel={
-                      messages.playground.metrics.operatorTypeLabel
-                    }
+                    operatorTypeLabel={messages.playground.metrics.operatorTypeLabel}
                     formatNumber={formatNumber}
                   />
                   <MetricCard
@@ -823,9 +748,7 @@ export function PlaygroundStudio() {
                     tokenCount={analysisState.pure.metrics.tokenCount}
                     typeCount={analysisState.pure.metrics.typeCount}
                     tokenNodeLabel={messages.playground.metrics.tokenNodeLabel}
-                    operatorTypeLabel={
-                      messages.playground.metrics.operatorTypeLabel
-                    }
+                    operatorTypeLabel={messages.playground.metrics.operatorTypeLabel}
                     formatNumber={formatNumber}
                   />
                 </div>
@@ -848,17 +771,12 @@ export function PlaygroundStudio() {
                     {analysisState.ok && analysisState.variables.length > 0 ? (
                       analysisState.variables.map((name) => (
                         <div key={name} className="min-w-0 space-y-2">
-                          <Label
-                            htmlFor={`var-${name}`}
-                            className="text-[color:var(--ink)]"
-                          >
+                          <Label htmlFor={`var-${name}`} className="text-[color:var(--ink)]">
                             {name}
                           </Label>
                           <Input
                             id={`var-${name}`}
-                            value={
-                              envValues[name] ?? defaultValueForVariable(name)
-                            }
+                            value={envValues[name] ?? defaultValueForVariable(name)}
                             onChange={(event) =>
                               setEnvValues((previous) => ({
                                 ...previous,
@@ -926,8 +844,7 @@ export function PlaygroundStudio() {
                       {analysisState.exactOk ? (
                         <span className="rounded-full border border-[color:var(--line)] bg-white/84 px-2 py-0.5 text-[11px] font-semibold text-[color:var(--ink-soft)]">
                           {analysisState.exactKind === "symbolic"
-                            ? messages.playground.numericCheck.exactModes
-                                .symbolic
+                            ? messages.playground.numericCheck.exactModes.symbolic
                             : messages.playground.numericCheck.exactModes.exact}
                         </span>
                       ) : null}
@@ -960,15 +877,11 @@ export function PlaygroundStudio() {
             )}
           </div>
 
-          <div
-            ref={previewActivation.ref}
-            className="min-w-0 space-y-3.5 xl:sticky xl:top-6"
-          >
+          <div ref={previewActivation.ref} className="min-w-0 space-y-3.5 xl:sticky xl:top-6">
             <div className="diagram-shell">
               <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[color:var(--line)] px-5 py-4">
                 <div className="mt-1 font-display text-2xl text-[color:var(--ink)]">
-                  {selectedView?.title ??
-                    messages.playground.diagram.titles.standard}
+                  {selectedView?.title ?? messages.playground.diagram.titles.standard}
                 </div>
                 <div className="rounded-full border border-[color:var(--line)] bg-white/80 px-3 py-1 text-xs font-semibold text-[color:var(--ink-soft)]">
                   {messages.playground.diagram.layoutBadge({
@@ -1002,9 +915,7 @@ export function PlaygroundStudio() {
                     <img
                       src={d2Preview.svgUrl}
                       alt={messages.playground.diagram.previewAriaLabel({
-                        mode:
-                          selectedView?.title ??
-                          messages.playground.diagram.titles.standard,
+                        mode: selectedView?.title ?? messages.playground.diagram.titles.standard,
                       })}
                       className="d2-preview-image"
                       onError={d2Preview.handleImageError}
@@ -1105,9 +1016,7 @@ export function PlaygroundStudio() {
             <ExperimentShell
               eyebrow={messages.playground.experiments.compression.eyebrow}
               title={messages.playground.experiments.compression.title}
-              description={
-                messages.playground.experiments.compression.description
-              }
+              description={messages.playground.experiments.compression.description}
               icon={<LuSparkles className="size-5" />}
             >
               <div className="space-y-2">
@@ -1116,9 +1025,7 @@ export function PlaygroundStudio() {
                 </Label>
                 <Select
                   value={compressionMode}
-                  onValueChange={(value) =>
-                    setCompressionMode(value as CompressionMode)
-                  }
+                  onValueChange={(value) => setCompressionMode(value as CompressionMode)}
                 >
                   <SelectTrigger className="w-full min-w-0 rounded-[0.8rem] border-[color:var(--line)] bg-[color:var(--paper-strong)]">
                     <SelectValue />
@@ -1128,16 +1035,10 @@ export function PlaygroundStudio() {
                       {messages.playground.experiments.compression.levels.light}
                     </SelectItem>
                     <SelectItem value="medium">
-                      {
-                        messages.playground.experiments.compression.levels
-                          .medium
-                      }
+                      {messages.playground.experiments.compression.levels.medium}
                     </SelectItem>
                     <SelectItem value="aggressive">
-                      {
-                        messages.playground.experiments.compression.levels
-                          .aggressive
-                      }
+                      {messages.playground.experiments.compression.levels.aggressive}
                     </SelectItem>
                   </SelectContent>
                 </Select>
@@ -1146,24 +1047,17 @@ export function PlaygroundStudio() {
               {analysisState.ok ? (
                 <div className="grid gap-2 sm:grid-cols-2">
                   <StatPill
-                    label={
-                      messages.playground.experiments.compression.baselineLabel
-                    }
+                    label={messages.playground.experiments.compression.baselineLabel}
                     value={formatNumber(analysisState.pure.metrics.tokenCount)}
                   />
                   <StatPill
-                    label={
-                      messages.playground.experiments.compression.typesLabel
-                    }
+                    label={messages.playground.experiments.compression.typesLabel}
                     value={formatTypeSet(analysisState.pure.metrics.types)}
                   />
                 </div>
               ) : (
                 <AsyncMessage>
-                  {
-                    messages.playground.experiments.compression
-                      .requiresValidExpression
-                  }
+                  {messages.playground.experiments.compression.requiresValidExpression}
                 </AsyncMessage>
               )}
 
@@ -1171,9 +1065,7 @@ export function PlaygroundStudio() {
                 type="button"
                 variant="outline"
                 className="w-full rounded-[0.85rem] border-[color:var(--line)] bg-[color:var(--paper-strong)]"
-                disabled={
-                  !analysisState.ok || compressionState.status === "running"
-                }
+                disabled={!analysisState.ok || compressionState.status === "running"}
                 onClick={() => {
                   void runCompressionDemo();
                 }}
@@ -1185,41 +1077,27 @@ export function PlaygroundStudio() {
               </Button>
 
               {compressionState.status === "idle" ? (
-                <AsyncMessage>
-                  {messages.playground.experiments.compression.idleHint}
-                </AsyncMessage>
+                <AsyncMessage>{messages.playground.experiments.compression.idleHint}</AsyncMessage>
               ) : compressionState.status === "error" ? (
-                <AsyncMessage tone="warning">
-                  {compressionState.error}
-                </AsyncMessage>
+                <AsyncMessage tone="warning">{compressionState.error}</AsyncMessage>
               ) : compressionState.status === "success" ? (
                 compressionState.data.exprText ? (
                   <>
                     <div className="grid gap-2 sm:grid-cols-3">
                       <StatPill
-                        label={
-                          messages.playground.experiments.compression.afterLabel
-                        }
-                        value={formatNumber(
-                          compressionState.data.candidateTokens ?? 0,
-                        )}
+                        label={messages.playground.experiments.compression.afterLabel}
+                        value={formatNumber(compressionState.data.candidateTokens ?? 0)}
                       />
                       <StatPill
-                        label={
-                          messages.playground.experiments.compression.gainLabel
-                        }
+                        label={messages.playground.experiments.compression.gainLabel}
                         value={formatSignedDelta(
                           (compressionState.data.candidateTokens ?? 0) -
                             compressionState.data.baselineTokens,
                         )}
                       />
                       <StatPill
-                        label={
-                          messages.playground.experiments.compression.deltaLabel
-                        }
-                        value={formatScientific(
-                          compressionState.data.delta ?? Number.NaN,
-                        )}
+                        label={messages.playground.experiments.compression.deltaLabel}
+                        value={formatScientific(compressionState.data.delta ?? Number.NaN)}
                       />
                     </div>
                     <pre className="max-h-40 max-w-full overflow-auto rounded-[0.85rem] border border-[color:var(--line)] bg-[color:var(--paper-strong)] p-4 font-mono text-xs leading-6 text-[color:var(--ink)]">
@@ -1240,30 +1118,26 @@ export function PlaygroundStudio() {
             <ExperimentShell
               eyebrow={messages.playground.experiments.synthesis.eyebrow}
               title={messages.playground.experiments.synthesis.title}
-              description={
-                messages.playground.experiments.synthesis.description
-              }
+              description={messages.playground.experiments.synthesis.description}
               icon={<LuGitBranch className="size-5" />}
             >
               <div className="flex flex-wrap gap-2">
-                {messages.playground.experiments.synthesis.samples.map(
-                  (sample) => (
-                    <Button
-                      key={sample.expr}
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="rounded-full border-[color:var(--line)] bg-[color:var(--paper-strong)]"
-                      onClick={() => {
-                        startTransition(() => {
-                          setSynthTarget(sample.expr);
-                        });
-                      }}
-                    >
-                      {sample.label}
-                    </Button>
-                  ),
-                )}
+                {messages.playground.experiments.synthesis.samples.map((sample) => (
+                  <Button
+                    key={sample.expr}
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="rounded-full border-[color:var(--line)] bg-[color:var(--paper-strong)]"
+                    onClick={() => {
+                      startTransition(() => {
+                        setSynthTarget(sample.expr);
+                      });
+                    }}
+                  >
+                    {sample.label}
+                  </Button>
+                ))}
                 <Button
                   type="button"
                   variant="outline"
@@ -1280,10 +1154,7 @@ export function PlaygroundStudio() {
               </div>
 
               <div className="space-y-2">
-                <Label
-                  htmlFor="synth-target"
-                  className="text-[color:var(--ink)]"
-                >
+                <Label htmlFor="synth-target" className="text-[color:var(--ink)]">
                   {messages.playground.experiments.synthesis.targetLabel}
                 </Label>
                 <Textarea
@@ -1340,16 +1211,11 @@ export function PlaygroundStudio() {
               {synthTargetState.ok ? (
                 <div className="grid gap-2 sm:grid-cols-2">
                   <StatPill
-                    label={
-                      messages.playground.experiments.synthesis
-                        .targetTokensLabel
-                    }
+                    label={messages.playground.experiments.synthesis.targetTokensLabel}
                     value={formatNumber(synthTargetState.metrics.tokenCount)}
                   />
                   <StatPill
-                    label={
-                      messages.playground.experiments.synthesis.variablesLabel
-                    }
+                    label={messages.playground.experiments.synthesis.variablesLabel}
                     value={synthTargetState.variables.join(", ") || "none"}
                   />
                 </div>
@@ -1365,9 +1231,7 @@ export function PlaygroundStudio() {
                 type="button"
                 variant="outline"
                 className="w-full rounded-[0.85rem] border-[color:var(--line)] bg-[color:var(--paper-strong)]"
-                disabled={
-                  !synthTargetState.ok || synthesisState.status === "running"
-                }
+                disabled={!synthTargetState.ok || synthesisState.status === "running"}
                 onClick={() => {
                   void runSynthesisDemo();
                 }}
@@ -1379,39 +1243,26 @@ export function PlaygroundStudio() {
               </Button>
 
               {synthesisState.status === "idle" ? (
-                <AsyncMessage>
-                  {messages.playground.experiments.synthesis.idleHint}
-                </AsyncMessage>
+                <AsyncMessage>{messages.playground.experiments.synthesis.idleHint}</AsyncMessage>
               ) : synthesisState.status === "error" ? (
-                <AsyncMessage tone="warning">
-                  {synthesisState.error}
-                </AsyncMessage>
+                <AsyncMessage tone="warning">{synthesisState.error}</AsyncMessage>
               ) : synthesisState.status === "success" ? (
                 <>
                   <div className="grid gap-2 sm:grid-cols-2">
                     <StatPill
-                      label={
-                        messages.playground.experiments.synthesis
-                          .resultTokensLabel
-                      }
+                      label={messages.playground.experiments.synthesis.resultTokensLabel}
                       value={formatNumber(synthesisState.data.resultTokens)}
                     />
                     <StatPill
-                      label={
-                        messages.playground.experiments.synthesis.leavesLabel
-                      }
+                      label={messages.playground.experiments.synthesis.leavesLabel}
                       value={formatNumber(synthesisState.data.leaves)}
                     />
                     <StatPill
-                      label={
-                        messages.playground.experiments.synthesis.distanceLabel
-                      }
+                      label={messages.playground.experiments.synthesis.distanceLabel}
                       value={formatScientific(synthesisState.data.distance)}
                     />
                     <StatPill
-                      label={
-                        messages.playground.experiments.synthesis.deltaLabel
-                      }
+                      label={messages.playground.experiments.synthesis.deltaLabel}
                       value={formatScientific(synthesisState.data.delta)}
                     />
                   </div>
@@ -1437,9 +1288,7 @@ export function PlaygroundStudio() {
                 </Label>
                 <Select
                   value={masterPresetId}
-                  onValueChange={(value) =>
-                    setMasterPresetId(value as MasterPresetId)
-                  }
+                  onValueChange={(value) => setMasterPresetId(value as MasterPresetId)}
                 >
                   <SelectTrigger className="w-full min-w-0 rounded-[0.8rem] border-[color:var(--line)] bg-[color:var(--paper-strong)]">
                     <SelectValue />
@@ -1463,11 +1312,7 @@ export function PlaygroundStudio() {
                   {masterPreset.expr}
                 </div>
                 <p className="mt-2 text-sm leading-6 text-[color:var(--ink-soft)]">
-                  {
-                    messages.playground.experiments.master.presetDescriptions[
-                      masterPresetId
-                    ]
-                  }
+                  {messages.playground.experiments.master.presetDescriptions[masterPresetId]}
                 </p>
               </div>
 
@@ -1502,9 +1347,7 @@ export function PlaygroundStudio() {
               </Button>
 
               {masterState.status === "idle" ? (
-                <AsyncMessage>
-                  {messages.playground.experiments.master.idleHint}
-                </AsyncMessage>
+                <AsyncMessage>{messages.playground.experiments.master.idleHint}</AsyncMessage>
               ) : masterState.status === "error" ? (
                 <AsyncMessage tone="warning">{masterState.error}</AsyncMessage>
               ) : masterState.status === "success" ? (
@@ -1515,9 +1358,7 @@ export function PlaygroundStudio() {
                       value={formatScientific(masterState.data.loss)}
                     />
                     <StatPill
-                      label={
-                        messages.playground.experiments.master.restartsLabel
-                      }
+                      label={messages.playground.experiments.master.restartsLabel}
                       value={formatNumber(masterState.data.restarts)}
                     />
                     <StatPill
@@ -1528,10 +1369,8 @@ export function PlaygroundStudio() {
                       label={messages.playground.experiments.master.statusLabel}
                       value={
                         masterState.data.success
-                          ? messages.playground.experiments.master.statuses
-                              .success
-                          : messages.playground.experiments.master.statuses
-                              .partial
+                          ? messages.playground.experiments.master.statuses.success
+                          : messages.playground.experiments.master.statuses.partial
                       }
                     />
                   </div>
@@ -1540,9 +1379,7 @@ export function PlaygroundStudio() {
                       {masterState.data.exprText}
                     </pre>
                   ) : null}
-                  <AsyncMessage
-                    tone={masterState.data.success ? "success" : "muted"}
-                  >
+                  <AsyncMessage tone={masterState.data.success ? "success" : "muted"}>
                     {masterState.data.success
                       ? messages.playground.experiments.master.success
                       : messages.playground.experiments.master.partial}

@@ -1,6 +1,7 @@
 export type NumExpr = { kind: "num"; value: number; raw: string };
 export type VarExpr = { kind: "var"; name: string };
 export type ConstExpr = { kind: "const"; name: "e" | "pi" | "i" };
+
 export type UnaryExpr =
   | { kind: "neg"; value: Expr }
   | { kind: "exp"; value: Expr }
