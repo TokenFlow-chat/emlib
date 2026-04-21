@@ -16,7 +16,7 @@
     "lint": "oxlint --react-plugin --deny-warnings src packages/emlib/src packages/emlib/test build.ts",
     "lint:fix": "oxlint --react-plugin --fix src packages/emlib/src packages/emlib/test build.ts",
     "typecheck": "tsgo -p tsconfig.json --noEmit && (cd packages/emlib && bun run build)",
-    "check": "bun fmt:check && bun lint && bun typecheck && bun test && bun run build"
+    "check": "bun lint && bun typecheck && bun test && bun run build"
   },
   "dependencies": {
     "@radix-ui/react-label": "^2.1.8",

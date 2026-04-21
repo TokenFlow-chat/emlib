@@ -6,6 +6,10 @@ import { evaluateLossless, valueToExpr } from "./numeric";
 import { parse } from "./parser";
 import { toString } from "./print";
 
+// ============================================================================
+// Types
+// ============================================================================
+
 export interface RewriteRule {
   name: string;
   apply(expr: Expr): Expr[];
@@ -14,21 +18,12 @@ export interface RewriteRule {
 type UnaryExprNode = Extract<Expr, { value: Expr }>;
 type BinaryExprNode = Extract<Expr, { left: Expr; right: Expr }>;
 
-function isOne(e: Expr): boolean {
-  return isNumericValue(e, 1);
-}
-function isZero(e: Expr): boolean {
-  return isNumericValue(e, 0);
-}
-function sameValue(a: Expr, b: Expr): boolean {
-  return exprEquals(a, b);
-}
-
 type PatternAtom = Extract<Expr, { kind: "num" | "var" | "const" }>;
 type PatternHole = { kind: "hole"; name: string };
 type PatternUnaryNode = { kind: UnaryExprNode["kind"]; value: PatternExpr };
 type PatternBinaryNode = { kind: BinaryExprNode["kind"]; left: PatternExpr; right: PatternExpr };
 type PatternExpr = PatternAtom | PatternHole | PatternUnaryNode | PatternBinaryNode;
+
 type TemplateSpec = readonly [name: string, pattern: string, replacement: string];
 type TemplateCompileOptions = { lowerPattern?: boolean };
 
@@ -40,11 +35,15 @@ interface PatternTemplate {
   replacement: PatternExpr;
 }
 
+// ============================================================================
+// Constants
+// ============================================================================
+
 const EXACT_NUMERIC_LIMIT = 32;
 const EXACT_RATIONAL_DEN_LIMIT = 16;
 const EXACT_RATIONAL_NUM_LIMIT = 16;
 const PATTERN_HOLE_RE = /\?([A-Za-z_][A-Za-z0-9_]*)/g;
-const PATTERN_TEMP_PREFIX = "__pattern_tmp_";
+
 const UNARY_PATTERN_KINDS = [
   "exp",
   "ln",
@@ -71,7 +70,9 @@ const UNARY_PATTERN_KINDS = [
   "acosh",
   "atanh",
 ] as const;
+
 const EXACT_PURE_BINARY_SOURCES = ["-?x", "?x+?y", "?x-?y", "?x*?y", "?x/?y", "?x^?y"] as const;
+
 const SHORT_TEMPLATE_SPECS: readonly TemplateSpec[] = [
   ["eml-short-neg", "E(E(1,E(1,E(1,E(E(1,1),1)))),E(?x,1))", "-?x"],
   ["eml-short-inv", "E(E(E(1,E(1,E(1,E(E(1,1),1)))),?x),1)", "1/?x"],
@@ -82,6 +83,7 @@ const SHORT_TEMPLATE_SPECS: readonly TemplateSpec[] = [
     "?x/?y",
   ],
 ];
+
 const ALGEBRAIC_TEMPLATE_SPECS: readonly TemplateSpec[] = [
   ["exp-ln-mul", "exp(ln(?x)+ln(?y))", "?x*?y"],
   ["exp-ln-div", "exp(ln(?x)-ln(?y))", "?x/?y"],
@@ -112,16 +114,64 @@ const ALGEBRAIC_TEMPLATE_SPECS: readonly TemplateSpec[] = [
   ["coth-times-sinh-right", "sinh(?x)*coth(?x)", "cosh(?x)"],
 ];
 
+// Set of unary expression kinds for O(1) lookup in readabilityPenalty.
+const UNARY_KINDS = new Set<string>([
+  "neg",
+  "exp",
+  "ln",
+  "sqrt",
+  "sin",
+  "cos",
+  "tan",
+  "cot",
+  "sec",
+  "csc",
+  "sinh",
+  "cosh",
+  "tanh",
+  "coth",
+  "sech",
+  "csch",
+  "asin",
+  "acos",
+  "atan",
+  "asec",
+  "acsc",
+  "acot",
+  "asinh",
+  "acosh",
+  "atanh",
+]);
+
+// ============================================================================
+// Lazy-initialized globals
+// ============================================================================
+
 let exactPureLiteralMap: Map<string, Expr> | null = null;
 let shortTemplates: PatternTemplate[] | null = null;
 let shortTemplateRules: RewriteRule[] | null = null;
 let exactPurePatterns: PatternTemplate[] | null = null;
 let algebraicTemplates: PatternTemplate[] | null = null;
 let earlyPureLiftRules: RewriteRule[] | null = null;
+
 const exactPureLiftCache = new WeakMap<Expr, Expr>();
 const exactFoldCache = new WeakMap<Expr, Expr>();
 const containsVariableCache = new WeakMap<Expr, boolean>();
 const containsEmlCache = new WeakMap<Expr, boolean>();
+
+// ============================================================================
+// Simple predicates
+// ============================================================================
+
+function isOne(e: Expr): boolean {
+  return isNumericValue(e, 1);
+}
+function isZero(e: Expr): boolean {
+  return isNumericValue(e, 0);
+}
+function sameValue(a: Expr, b: Expr): boolean {
+  return exprEquals(a, b);
+}
 
 function isBinaryExpr(expr: Expr): expr is BinaryExprNode {
   return typeof expr === "object" && expr !== null && "left" in expr && "right" in expr;
@@ -130,6 +180,18 @@ function isBinaryExpr(expr: Expr): expr is BinaryExprNode {
 function isUnaryExpr(expr: Expr): expr is UnaryExprNode {
   return typeof expr === "object" && expr !== null && "value" in expr && !("raw" in expr);
 }
+
+function isPatternBinaryExpr(pattern: PatternExpr): pattern is PatternBinaryNode {
+  return "left" in pattern && "right" in pattern;
+}
+
+function isPatternUnaryExpr(pattern: PatternExpr): pattern is PatternUnaryNode {
+  return "value" in pattern && !("raw" in pattern);
+}
+
+// ============================================================================
+// Child rewriting
+// ============================================================================
 
 function rewriteChildren(expr: Expr, recurse: (child: Expr) => Expr): Expr {
   if (isBinaryExpr(expr)) {
@@ -144,13 +206,9 @@ function rewriteChildren(expr: Expr, recurse: (child: Expr) => Expr): Expr {
   return expr;
 }
 
-function isPatternBinaryExpr(pattern: PatternExpr): pattern is PatternBinaryNode {
-  return "left" in pattern && "right" in pattern;
-}
-
-function isPatternUnaryExpr(pattern: PatternExpr): pattern is PatternUnaryNode {
-  return "value" in pattern && !("raw" in pattern);
-}
+// ============================================================================
+// Pattern system
+// ============================================================================
 
 function patternNodeCount(pattern: PatternExpr): number {
   if (pattern.kind === "hole") return 1;
@@ -163,40 +221,141 @@ function patternNodeCount(pattern: PatternExpr): number {
   return 1;
 }
 
-function createPatternTempName(index: number): string {
-  return `${PATTERN_TEMP_PREFIX}${index}`;
-}
-
-function exprToPattern(expr: Expr, holes: ReadonlyMap<string, string>): PatternExpr {
+/**
+ * Convert an Expr into a PatternExpr by treating variables whose names appear
+ * in `varToHole` as pattern holes.
+ */
+function exprToPattern(expr: Expr, varToHole: ReadonlyMap<string, string>): PatternExpr {
   if (expr.kind === "var") {
-    const holeName = holes.get(expr.name);
+    const holeName = varToHole.get(expr.name);
     return holeName ? { kind: "hole", name: holeName } : expr;
   }
   if (isBinaryExpr(expr)) {
     return {
       kind: expr.kind,
-      left: exprToPattern(expr.left, holes),
-      right: exprToPattern(expr.right, holes),
+      left: exprToPattern(expr.left, varToHole),
+      right: exprToPattern(expr.right, varToHole),
     };
   }
   if (isUnaryExpr(expr)) {
-    return { kind: expr.kind, value: exprToPattern(expr.value, holes) };
+    return { kind: expr.kind, value: exprToPattern(expr.value, varToHole) };
   }
   return expr;
 }
 
+/**
+ * Compile a pattern source string into a PatternExpr.
+ *
+ * Because the parser does not natively support `?name` hole syntax, we replace
+ * each hole with a short synthetic variable (`__hN__`) before parsing, then
+ * map those variables back to holes afterwards. Identical hole names (e.g.
+ * multiple occurrences of `?x`) share the same synthetic variable, keeping
+ * the AST compact and intuitive.
+ */
 function compilePattern(source: string, lowerPattern = false): PatternExpr {
-  let holeIndex = 0;
-  const holes = new Map<string, string>();
+  const holeToVar = new Map<string, string>();
+  let nextId = 0;
+
   const rewritten = source.replace(PATTERN_HOLE_RE, (_whole, holeName: string) => {
-    const tempName = createPatternTempName(holeIndex);
-    holeIndex += 1;
-    holes.set(tempName, holeName);
-    return tempName;
+    let varName = holeToVar.get(holeName);
+    if (!varName) {
+      varName = `__h${nextId++}__`;
+      holeToVar.set(holeName, varName);
+    }
+    return varName;
   });
+
   const parsed = parse(rewritten);
   const materialized = lowerPattern ? reduceTypes(parsed) : parsed;
-  return exprToPattern(materialized, holes);
+
+  // Invert the mapping so exprToPattern can look up holes by variable name.
+  const varToHole = new Map<string, string>();
+  for (const [hole, v] of holeToVar) {
+    varToHole.set(v, hole);
+  }
+
+  return exprToPattern(materialized, varToHole);
+}
+
+function compileTemplate(
+  name: string,
+  patternSource: string,
+  replacementSource: string,
+  options: TemplateCompileOptions = {},
+): PatternTemplate {
+  return {
+    name,
+    pattern: compilePattern(patternSource, options.lowerPattern ?? false),
+    replacement: compilePattern(replacementSource),
+  };
+}
+
+function compileTemplates(
+  specs: readonly TemplateSpec[],
+  options: TemplateCompileOptions = {},
+): PatternTemplate[] {
+  return specs.map(([name, pattern, replacement]) =>
+    compileTemplate(name, pattern, replacement, options),
+  );
+}
+
+/**
+ * Match a pattern against an expression, returning bindings for all holes.
+ * Implemented iteratively to avoid stack overflow on deeply nested ASTs.
+ */
+function matchPattern(
+  pattern: PatternExpr,
+  expr: Expr,
+  bindings: PatternBindings = new Map(),
+): PatternBindings | null {
+  const stack: Array<[PatternExpr, Expr]> = [[pattern, expr]];
+
+  while (stack.length > 0) {
+    const [p, e] = stack.pop()!;
+
+    if (p.kind === "hole") {
+      const bound = bindings.get(p.name);
+      if (bound === undefined) {
+        bindings.set(p.name, e);
+      } else if (!exprEquals(bound, e)) {
+        return null;
+      }
+      continue;
+    }
+
+    if (p.kind !== e.kind) return null;
+
+    if (p.kind === "num") {
+      if ((e as { raw: string }).raw !== p.raw) return null;
+      continue;
+    }
+
+    if (p.kind === "var") {
+      if ((e as { name: string }).name !== p.name) return null;
+      continue;
+    }
+
+    if (p.kind === "const") {
+      if ((e as { name: string }).name !== p.name) return null;
+      continue;
+    }
+
+    if (isPatternBinaryExpr(p) && isBinaryExpr(e)) {
+      // Push right first so left is processed first (LIFO).
+      stack.push([p.right, e.right]);
+      stack.push([p.left, e.left]);
+      continue;
+    }
+
+    if (isPatternUnaryExpr(p) && isUnaryExpr(e)) {
+      stack.push([p.value, e.value]);
+      continue;
+    }
+
+    return null;
+  }
+
+  return bindings;
 }
 
 function instantiatePattern(
@@ -222,28 +381,6 @@ function instantiatePattern(
   return pattern;
 }
 
-function compileTemplate(
-  name: string,
-  patternSource: string,
-  replacementSource: string,
-  options: TemplateCompileOptions = {},
-): PatternTemplate {
-  return {
-    name,
-    pattern: compilePattern(patternSource, options.lowerPattern ?? false),
-    replacement: compilePattern(replacementSource),
-  };
-}
-
-function compileTemplates(
-  specs: readonly TemplateSpec[],
-  options: TemplateCompileOptions = {},
-): PatternTemplate[] {
-  return specs.map(([name, pattern, replacement]) =>
-    compileTemplate(name, pattern, replacement, options),
-  );
-}
-
 function createTemplateRule(template: PatternTemplate): RewriteRule {
   return {
     name: template.name,
@@ -260,6 +397,10 @@ function addTemplateMatches(expr: Expr, templates: readonly PatternTemplate[], o
     if (bindings) out.push(instantiatePattern(template.replacement, bindings));
   }
 }
+
+// ============================================================================
+// Exact pure forms & helpers
+// ============================================================================
 
 function smallIntGcd(a: number, b: number): number {
   let x = Math.abs(a);
@@ -349,41 +490,6 @@ function getEarlyPureLiftRules(): RewriteRule[] {
   return earlyPureLiftRules;
 }
 
-function matchPattern(
-  pattern: PatternExpr,
-  expr: Expr,
-  bindings: PatternBindings = new Map(),
-): PatternBindings | null {
-  if (pattern.kind === "hole") {
-    const name = pattern.name;
-    const bound = bindings.get(name);
-    if (!bound) {
-      bindings.set(name, expr);
-      return bindings;
-    }
-    return exprEquals(bound, expr) ? bindings : null;
-  }
-
-  if (pattern.kind !== expr.kind) return null;
-  if (pattern.kind === "num" && expr.kind === "num") {
-    return pattern.raw === expr.raw ? bindings : null;
-  }
-  if (pattern.kind === "var" && expr.kind === "var") {
-    return pattern.name === expr.name ? bindings : null;
-  }
-  if (pattern.kind === "const" && expr.kind === "const") {
-    return pattern.name === expr.name ? bindings : null;
-  }
-  if (isPatternBinaryExpr(pattern) && isBinaryExpr(expr)) {
-    const left = matchPattern(pattern.left, expr.left, bindings);
-    return left ? matchPattern(pattern.right, expr.right, left) : null;
-  }
-  if (isPatternUnaryExpr(pattern) && isUnaryExpr(expr)) {
-    return matchPattern(pattern.value, expr.value, bindings);
-  }
-  return null;
-}
-
 function containsVariable(expr: Expr): boolean {
   const cached = containsVariableCache.get(expr);
   if (cached !== undefined) return cached;
@@ -467,6 +573,10 @@ function foldExactSubexpressions(expr: Expr): Expr {
   exactFoldCache.set(expr, result);
   return result;
 }
+
+// ============================================================================
+// Core rewrite rules
+// ============================================================================
 
 const foldBasicRule: RewriteRule = {
   name: "fold-basic",
@@ -593,6 +703,10 @@ export const coreRewriteRules: RewriteRule[] = [
   },
 ];
 
+// ============================================================================
+// Search infrastructure
+// ============================================================================
+
 function replaceAtPath(expr: Expr, path: readonly number[], replacement: Expr, depth = 0): Expr {
   if (depth >= path.length) return replacement;
   const head = path[depth];
@@ -702,43 +816,18 @@ function readabilityPenalty(expr: Expr): number {
       penalty = 2 + readabilityPenalty(expr.left) + readabilityPenalty(expr.right);
       break;
     case "pow":
-      penalty = readabilityPenalty(expr.left) + readabilityPenalty(expr.right);
-      break;
     case "div":
       penalty = readabilityPenalty(expr.left) + readabilityPenalty(expr.right);
       break;
     case "eml":
       penalty = 3 + readabilityPenalty(expr.left) + readabilityPenalty(expr.right);
       break;
-    case "neg":
-    case "exp":
-    case "ln":
-    case "sqrt":
-    case "sin":
-    case "cos":
-    case "tan":
-    case "cot":
-    case "sec":
-    case "csc":
-    case "sinh":
-    case "cosh":
-    case "tanh":
-    case "coth":
-    case "sech":
-    case "csch":
-    case "asin":
-    case "acos":
-    case "atan":
-    case "asec":
-    case "acsc":
-    case "acot":
-    case "asinh":
-    case "acosh":
-    case "atanh":
-      penalty = readabilityPenalty(expr.value);
-      break;
     default:
-      penalty = 0;
+      if (UNARY_KINDS.has(expr.kind)) {
+        penalty = readabilityPenalty((expr as UnaryExprNode).value);
+      } else {
+        penalty = 0;
+      }
       break;
   }
 
@@ -844,6 +933,10 @@ function optimize(root: Expr, options: SearchOptions = {}): Expr {
 
   return best;
 }
+
+// ============================================================================
+// Public API
+// ============================================================================
 
 export function reduceTokens(root: Expr, options: SearchOptions = {}): Expr {
   const rules = options.rules ?? coreRewriteRules;
