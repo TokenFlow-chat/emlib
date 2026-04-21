@@ -11,6 +11,9 @@ export interface RewriteRule {
   apply(expr: Expr): Expr[];
 }
 
+type UnaryExprNode = Extract<Expr, { value: Expr }>;
+type BinaryExprNode = Extract<Expr, { left: Expr; right: Expr }>;
+
 function isOne(e: Expr): boolean {
   return isNumericValue(e, 1);
 }
@@ -21,26 +24,27 @@ function sameValue(a: Expr, b: Expr): boolean {
   return exprEquals(a, b);
 }
 
-const PLACEHOLDER_PREFIX = "_";
-const SHORT_NEG_PATTERN = parse("E(E(1,E(1,E(1,E(E(1,1),1)))),E(_x,1))");
-const SHORT_INV_PATTERN = parse("E(E(E(1,E(1,E(1,E(E(1,1),1)))),_x),1)");
-const SHORT_MUL_PATTERN = parse("E(E(1,E(E(E(1,E(E(1,E(1,_x)),1)),E(1,E(E(1,E(_y,1)),1))),1)),1)");
-const SHORT_DIV_PATTERN = parse(
-  "E(E(1,E(E(E(1,E(E(1,E(1,_x)),1)),E(1,E(E(1,E(E(E(E(1,E(1,E(1,E(E(1,1),1)))),_y),1),1)),1))),1)),1)",
-);
+type PatternAtom = Extract<Expr, { kind: "num" | "var" | "const" }>;
+type PatternHole = { kind: "hole"; name: string };
+type PatternUnaryNode = { kind: UnaryExprNode["kind"]; value: PatternExpr };
+type PatternBinaryNode = { kind: BinaryExprNode["kind"]; left: PatternExpr; right: PatternExpr };
+type PatternExpr = PatternAtom | PatternHole | PatternUnaryNode | PatternBinaryNode;
+type TemplateSpec = readonly [name: string, pattern: string, replacement: string];
+type TemplateCompileOptions = { lowerPattern?: boolean };
 
-type PatternBindings = Record<string, Expr>;
-type PatternBuilder = (bindings: PatternBindings, recurse: (expr: Expr) => Expr) => Expr;
+type PatternBindings = Map<string, Expr>;
 
-interface ExactPurePattern {
+interface PatternTemplate {
   name: string;
-  pattern: Expr;
-  build: PatternBuilder;
+  pattern: PatternExpr;
+  replacement: PatternExpr;
 }
 
 const EXACT_NUMERIC_LIMIT = 32;
 const EXACT_RATIONAL_DEN_LIMIT = 16;
 const EXACT_RATIONAL_NUM_LIMIT = 16;
+const PATTERN_HOLE_RE = /\?([A-Za-z_][A-Za-z0-9_]*)/g;
+const PATTERN_TEMP_PREFIX = "__pattern_tmp_";
 const UNARY_PATTERN_KINDS = [
   "exp",
   "ln",
@@ -67,50 +71,195 @@ const UNARY_PATTERN_KINDS = [
   "acosh",
   "atanh",
 ] as const;
-const BINARY_PATTERN_BUILDERS = [
-  {
-    source: "-_x",
-    build(bindings: PatternBindings, recurse: (expr: Expr) => Expr): Expr {
-      return { kind: "neg", value: recurse(bindings._x!) };
-    },
-  },
-  {
-    source: "_x+_y",
-    build(bindings: PatternBindings, recurse: (expr: Expr) => Expr): Expr {
-      return { kind: "add", left: recurse(bindings._x!), right: recurse(bindings._y!) };
-    },
-  },
-  {
-    source: "_x-_y",
-    build(bindings: PatternBindings, recurse: (expr: Expr) => Expr): Expr {
-      return { kind: "sub", left: recurse(bindings._x!), right: recurse(bindings._y!) };
-    },
-  },
-  {
-    source: "_x*_y",
-    build(bindings: PatternBindings, recurse: (expr: Expr) => Expr): Expr {
-      return { kind: "mul", left: recurse(bindings._x!), right: recurse(bindings._y!) };
-    },
-  },
-  {
-    source: "_x/_y",
-    build(bindings: PatternBindings, recurse: (expr: Expr) => Expr): Expr {
-      return { kind: "div", left: recurse(bindings._x!), right: recurse(bindings._y!) };
-    },
-  },
-  {
-    source: "_x^_y",
-    build(bindings: PatternBindings, recurse: (expr: Expr) => Expr): Expr {
-      return { kind: "pow", left: recurse(bindings._x!), right: recurse(bindings._y!) };
-    },
-  },
-] as const;
+const EXACT_PURE_BINARY_SOURCES = ["-?x", "?x+?y", "?x-?y", "?x*?y", "?x/?y", "?x^?y"] as const;
+const SHORT_TEMPLATE_SPECS: readonly TemplateSpec[] = [
+  ["eml-short-neg", "E(E(1,E(1,E(1,E(E(1,1),1)))),E(?x,1))", "-?x"],
+  ["eml-short-inv", "E(E(E(1,E(1,E(1,E(E(1,1),1)))),?x),1)", "1/?x"],
+  ["eml-short-mul", "E(E(1,E(E(E(1,E(E(1,E(1,?x)),1)),E(1,E(E(1,E(?y,1)),1))),1)),1)", "?x*?y"],
+  [
+    "eml-short-div",
+    "E(E(1,E(E(E(1,E(E(1,E(1,?x)),1)),E(1,E(E(1,E(E(E(E(1,E(1,E(1,E(E(1,1),1)))),?y),1),1)),1))),1)),1)",
+    "?x/?y",
+  ],
+];
+const ALGEBRAIC_TEMPLATE_SPECS: readonly TemplateSpec[] = [
+  ["exp-ln-mul", "exp(ln(?x)+ln(?y))", "?x*?y"],
+  ["exp-ln-div", "exp(ln(?x)-ln(?y))", "?x/?y"],
+  ["exp-ln-pow-left", "exp(ln(?x)*?y)", "?x^?y"],
+  ["exp-ln-pow-right", "exp(?y*ln(?x))", "?x^?y"],
+  ["pow-half-sqrt", "?x^0.5", "sqrt(?x)"],
+  ["zero-sub-neg", "0-?x", "-?x"],
+  ["sub-neg-add", "?x-(-?y)", "?x+?y"],
+  ["sin-over-cos", "sin(?x)/cos(?x)", "tan(?x)"],
+  ["cos-over-sin", "cos(?x)/sin(?x)", "cot(?x)"],
+  ["inv-cos", "1/cos(?x)", "sec(?x)"],
+  ["inv-sin", "1/sin(?x)", "csc(?x)"],
+  ["sin-over-tan", "sin(?x)/tan(?x)", "cos(?x)"],
+  ["cos-over-cot", "cos(?x)/cot(?x)", "sin(?x)"],
+  ["sinh-over-cosh", "sinh(?x)/cosh(?x)", "tanh(?x)"],
+  ["cosh-over-sinh", "cosh(?x)/sinh(?x)", "coth(?x)"],
+  ["inv-cosh", "1/cosh(?x)", "sech(?x)"],
+  ["inv-sinh", "1/sinh(?x)", "csch(?x)"],
+  ["sinh-over-tanh", "sinh(?x)/tanh(?x)", "cosh(?x)"],
+  ["cosh-over-coth", "cosh(?x)/coth(?x)", "sinh(?x)"],
+  ["tan-times-cos-left", "tan(?x)*cos(?x)", "sin(?x)"],
+  ["tan-times-cos-right", "cos(?x)*tan(?x)", "sin(?x)"],
+  ["cot-times-sin-left", "cot(?x)*sin(?x)", "cos(?x)"],
+  ["cot-times-sin-right", "sin(?x)*cot(?x)", "cos(?x)"],
+  ["tanh-times-cosh-left", "tanh(?x)*cosh(?x)", "sinh(?x)"],
+  ["tanh-times-cosh-right", "cosh(?x)*tanh(?x)", "sinh(?x)"],
+  ["coth-times-sinh-left", "coth(?x)*sinh(?x)", "cosh(?x)"],
+  ["coth-times-sinh-right", "sinh(?x)*coth(?x)", "cosh(?x)"],
+];
 
 let exactPureLiteralMap: Map<string, Expr> | null = null;
-let exactPurePatterns: ExactPurePattern[] | null = null;
+let shortTemplates: PatternTemplate[] | null = null;
+let shortTemplateRules: RewriteRule[] | null = null;
+let exactPurePatterns: PatternTemplate[] | null = null;
+let algebraicTemplates: PatternTemplate[] | null = null;
 let earlyPureLiftRules: RewriteRule[] | null = null;
 const exactPureLiftCache = new WeakMap<Expr, Expr>();
 const exactFoldCache = new WeakMap<Expr, Expr>();
+const containsVariableCache = new WeakMap<Expr, boolean>();
+const containsEmlCache = new WeakMap<Expr, boolean>();
+
+function isBinaryExpr(expr: Expr): expr is BinaryExprNode {
+  return typeof expr === "object" && expr !== null && "left" in expr && "right" in expr;
+}
+
+function isUnaryExpr(expr: Expr): expr is UnaryExprNode {
+  return typeof expr === "object" && expr !== null && "value" in expr && !("raw" in expr);
+}
+
+function rewriteChildren(expr: Expr, recurse: (child: Expr) => Expr): Expr {
+  if (isBinaryExpr(expr)) {
+    const left = recurse(expr.left);
+    const right = recurse(expr.right);
+    return left === expr.left && right === expr.right ? expr : { ...expr, left, right };
+  }
+  if (isUnaryExpr(expr)) {
+    const value = recurse(expr.value);
+    return value === expr.value ? expr : { ...expr, value };
+  }
+  return expr;
+}
+
+function isPatternBinaryExpr(pattern: PatternExpr): pattern is PatternBinaryNode {
+  return "left" in pattern && "right" in pattern;
+}
+
+function isPatternUnaryExpr(pattern: PatternExpr): pattern is PatternUnaryNode {
+  return "value" in pattern && !("raw" in pattern);
+}
+
+function patternNodeCount(pattern: PatternExpr): number {
+  if (pattern.kind === "hole") return 1;
+  if (isPatternBinaryExpr(pattern)) {
+    return 1 + patternNodeCount(pattern.left) + patternNodeCount(pattern.right);
+  }
+  if (isPatternUnaryExpr(pattern)) {
+    return 1 + patternNodeCount(pattern.value);
+  }
+  return 1;
+}
+
+function createPatternTempName(index: number): string {
+  return `${PATTERN_TEMP_PREFIX}${index}`;
+}
+
+function exprToPattern(expr: Expr, holes: ReadonlyMap<string, string>): PatternExpr {
+  if (expr.kind === "var") {
+    const holeName = holes.get(expr.name);
+    return holeName ? { kind: "hole", name: holeName } : expr;
+  }
+  if (isBinaryExpr(expr)) {
+    return {
+      kind: expr.kind,
+      left: exprToPattern(expr.left, holes),
+      right: exprToPattern(expr.right, holes),
+    };
+  }
+  if (isUnaryExpr(expr)) {
+    return { kind: expr.kind, value: exprToPattern(expr.value, holes) };
+  }
+  return expr;
+}
+
+function compilePattern(source: string, lowerPattern = false): PatternExpr {
+  let holeIndex = 0;
+  const holes = new Map<string, string>();
+  const rewritten = source.replace(PATTERN_HOLE_RE, (_whole, holeName: string) => {
+    const tempName = createPatternTempName(holeIndex);
+    holeIndex += 1;
+    holes.set(tempName, holeName);
+    return tempName;
+  });
+  const parsed = parse(rewritten);
+  const materialized = lowerPattern ? reduceTypes(parsed) : parsed;
+  return exprToPattern(materialized, holes);
+}
+
+function instantiatePattern(
+  pattern: PatternExpr,
+  bindings: ReadonlyMap<string, Expr>,
+  recurse: (expr: Expr) => Expr = (expr) => expr,
+): Expr {
+  if (pattern.kind === "hole") {
+    const bound = bindings.get(pattern.name);
+    if (!bound) throw new Error(`Missing binding for ?${pattern.name}`);
+    return recurse(bound);
+  }
+  if (isPatternBinaryExpr(pattern)) {
+    return {
+      kind: pattern.kind,
+      left: instantiatePattern(pattern.left, bindings, recurse),
+      right: instantiatePattern(pattern.right, bindings, recurse),
+    };
+  }
+  if (isPatternUnaryExpr(pattern)) {
+    return { kind: pattern.kind, value: instantiatePattern(pattern.value, bindings, recurse) };
+  }
+  return pattern;
+}
+
+function compileTemplate(
+  name: string,
+  patternSource: string,
+  replacementSource: string,
+  options: TemplateCompileOptions = {},
+): PatternTemplate {
+  return {
+    name,
+    pattern: compilePattern(patternSource, options.lowerPattern ?? false),
+    replacement: compilePattern(replacementSource),
+  };
+}
+
+function compileTemplates(
+  specs: readonly TemplateSpec[],
+  options: TemplateCompileOptions = {},
+): PatternTemplate[] {
+  return specs.map(([name, pattern, replacement]) =>
+    compileTemplate(name, pattern, replacement, options),
+  );
+}
+
+function createTemplateRule(template: PatternTemplate): RewriteRule {
+  return {
+    name: template.name,
+    apply(expr) {
+      const bindings = matchPattern(template.pattern, expr);
+      return bindings ? [instantiatePattern(template.replacement, bindings)] : [];
+    },
+  };
+}
+
+function addTemplateMatches(expr: Expr, templates: readonly PatternTemplate[], out: Expr[]): void {
+  for (const template of templates) {
+    const bindings = matchPattern(template.pattern, expr);
+    if (bindings) out.push(instantiatePattern(template.replacement, bindings));
+  }
+}
 
 function smallIntGcd(a: number, b: number): number {
   let x = Math.abs(a);
@@ -142,10 +291,11 @@ function getExactPureLiteralMap(): Map<string, Expr> {
 
   const map = new Map<string, Expr>();
   for (const source of exactPureLiteralSources()) {
-    const lowered = reduceTypes(parse(source));
+    const parsed = parse(source);
+    const lowered = reduceTypes(parsed);
     const loweredKey = exprKey(lowered);
     const previous = map.get(loweredKey);
-    const replacement = parse(source);
+    const replacement = parsed;
     if (!previous || compareReadable(replacement, previous) < 0) {
       map.set(loweredKey, replacement);
     }
@@ -155,205 +305,113 @@ function getExactPureLiteralMap(): Map<string, Expr> {
   return map;
 }
 
-function makeUnaryBuilder(kind: (typeof UNARY_PATTERN_KINDS)[number]): PatternBuilder {
-  return (bindings, recurse) => ({ kind, value: recurse(bindings._x!) }) as Expr;
+function getShortTemplates(): readonly PatternTemplate[] {
+  if (shortTemplates) return shortTemplates;
+  shortTemplates = compileTemplates(SHORT_TEMPLATE_SPECS);
+  return shortTemplates;
 }
 
-function getExactPurePatterns(): ExactPurePattern[] {
+function getShortTemplateRules(): readonly RewriteRule[] {
+  if (shortTemplateRules) return shortTemplateRules;
+  shortTemplateRules = getShortTemplates().map(createTemplateRule);
+  return shortTemplateRules;
+}
+
+function getExactPurePatterns(): readonly PatternTemplate[] {
   if (exactPurePatterns) return exactPurePatterns;
 
-  const patterns: ExactPurePattern[] = [];
-  for (const kind of UNARY_PATTERN_KINDS) {
-    patterns.push({
-      name: `pure-${kind}`,
-      pattern: reduceTypes(parse(`${kind}(_x)`)),
-      build: makeUnaryBuilder(kind),
-    });
-  }
-  for (const { source, build } of BINARY_PATTERN_BUILDERS) {
-    patterns.push({
-      name: `pure-${source}`,
-      pattern: reduceTypes(parse(source)),
-      build,
-    });
-  }
+  const specs: TemplateSpec[] = [
+    ...UNARY_PATTERN_KINDS.map((kind) => [`pure-${kind}`, `${kind}(?x)`, `${kind}(?x)`] as const),
+    ...EXACT_PURE_BINARY_SOURCES.map((source) => [`pure-${source}`, source, source] as const),
+  ];
+  const patterns = compileTemplates(specs, { lowerPattern: true });
 
   patterns.sort(
-    (a, b) => countTokens(b.pattern) - countTokens(a.pattern) || b.name.length - a.name.length || 0,
+    (a, b) =>
+      patternNodeCount(b.pattern) - patternNodeCount(a.pattern) ||
+      b.name.length - a.name.length ||
+      0,
   );
 
   exactPurePatterns = patterns;
   return patterns;
 }
 
+function getAlgebraicTemplates(): readonly PatternTemplate[] {
+  if (algebraicTemplates) return algebraicTemplates;
+  algebraicTemplates = compileTemplates(ALGEBRAIC_TEMPLATE_SPECS);
+  return algebraicTemplates;
+}
+
 function getEarlyPureLiftRules(): RewriteRule[] {
   if (earlyPureLiftRules) return earlyPureLiftRules;
-
-  const names = new Set([
-    "fold-basic",
-    "eml-short-neg",
-    "eml-short-inv",
-    "eml-short-mul",
-    "eml-short-div",
-  ]);
-  earlyPureLiftRules = coreRewriteRules.filter((rule) => names.has(rule.name));
+  earlyPureLiftRules = [foldBasicRule, ...getShortTemplateRules()];
   return earlyPureLiftRules;
 }
 
-function isPlaceholder(pattern: Expr): boolean {
-  return pattern.kind === "var" && pattern.name.startsWith(PLACEHOLDER_PREFIX);
-}
-
 function matchPattern(
-  pattern: Expr,
+  pattern: PatternExpr,
   expr: Expr,
-  bindings: Record<string, Expr> = {},
-): Record<string, Expr> | null {
-  if (isPlaceholder(pattern)) {
-    const placeholder = pattern as Extract<Expr, { kind: "var" }>;
-    const name = placeholder.name;
-    const bound = bindings[name];
+  bindings: PatternBindings = new Map(),
+): PatternBindings | null {
+  if (pattern.kind === "hole") {
+    const name = pattern.name;
+    const bound = bindings.get(name);
     if (!bound) {
-      bindings[name] = expr;
+      bindings.set(name, expr);
       return bindings;
     }
     return exprEquals(bound, expr) ? bindings : null;
   }
 
   if (pattern.kind !== expr.kind) return null;
-  switch (pattern.kind) {
-    case "num": {
-      const other = expr as typeof pattern;
-      return pattern.raw === other.raw ? bindings : null;
-    }
-    case "var": {
-      const other = expr as typeof pattern;
-      return pattern.name === other.name ? bindings : null;
-    }
-    case "const": {
-      const other = expr as typeof pattern;
-      return pattern.name === other.name ? bindings : null;
-    }
-    case "eml":
-    case "add":
-    case "sub":
-    case "mul":
-    case "div":
-    case "pow": {
-      const other = expr as typeof pattern;
-      const left = matchPattern(pattern.left, other.left, bindings);
-      return left ? matchPattern(pattern.right, other.right, left) : null;
-    }
-    case "neg":
-    case "exp":
-    case "ln":
-    case "sqrt":
-    case "sin":
-    case "cos":
-    case "tan":
-    case "cot":
-    case "sec":
-    case "csc":
-    case "sinh":
-    case "cosh":
-    case "tanh":
-    case "coth":
-    case "sech":
-    case "csch":
-    case "asin":
-    case "acos":
-    case "atan":
-    case "asec":
-    case "acsc":
-    case "acot":
-    case "asinh":
-    case "acosh":
-    case "atanh":
-      return matchPattern(pattern.value, (expr as typeof pattern).value, bindings);
+  if (pattern.kind === "num" && expr.kind === "num") {
+    return pattern.raw === expr.raw ? bindings : null;
   }
+  if (pattern.kind === "var" && expr.kind === "var") {
+    return pattern.name === expr.name ? bindings : null;
+  }
+  if (pattern.kind === "const" && expr.kind === "const") {
+    return pattern.name === expr.name ? bindings : null;
+  }
+  if (isPatternBinaryExpr(pattern) && isBinaryExpr(expr)) {
+    const left = matchPattern(pattern.left, expr.left, bindings);
+    return left ? matchPattern(pattern.right, expr.right, left) : null;
+  }
+  if (isPatternUnaryExpr(pattern) && isUnaryExpr(expr)) {
+    return matchPattern(pattern.value, expr.value, bindings);
+  }
+  return null;
 }
 
 function containsVariable(expr: Expr): boolean {
-  switch (expr.kind) {
-    case "var":
-      return true;
-    case "eml":
-    case "add":
-    case "sub":
-    case "mul":
-    case "div":
-    case "pow":
-      return containsVariable(expr.left) || containsVariable(expr.right);
-    case "neg":
-    case "exp":
-    case "ln":
-    case "sqrt":
-    case "sin":
-    case "cos":
-    case "tan":
-    case "cot":
-    case "sec":
-    case "csc":
-    case "sinh":
-    case "cosh":
-    case "tanh":
-    case "coth":
-    case "sech":
-    case "csch":
-    case "asin":
-    case "acos":
-    case "atan":
-    case "asec":
-    case "acsc":
-    case "acot":
-    case "asinh":
-    case "acosh":
-    case "atanh":
-      return containsVariable(expr.value);
-    default:
-      return false;
-  }
+  const cached = containsVariableCache.get(expr);
+  if (cached !== undefined) return cached;
+
+  const value =
+    expr.kind === "var" ||
+    (isBinaryExpr(expr)
+      ? containsVariable(expr.left) || containsVariable(expr.right)
+      : isUnaryExpr(expr)
+        ? containsVariable(expr.value)
+        : false);
+  containsVariableCache.set(expr, value);
+  return value;
 }
 
 function containsEml(expr: Expr): boolean {
-  switch (expr.kind) {
-    case "eml":
-      return true;
-    case "add":
-    case "sub":
-    case "mul":
-    case "div":
-    case "pow":
-      return containsEml(expr.left) || containsEml(expr.right);
-    case "neg":
-    case "exp":
-    case "ln":
-    case "sqrt":
-    case "sin":
-    case "cos":
-    case "tan":
-    case "cot":
-    case "sec":
-    case "csc":
-    case "sinh":
-    case "cosh":
-    case "tanh":
-    case "coth":
-    case "sech":
-    case "csch":
-    case "asin":
-    case "acos":
-    case "atan":
-    case "asec":
-    case "acsc":
-    case "acot":
-    case "asinh":
-    case "acosh":
-    case "atanh":
-      return containsEml(expr.value);
-    default:
-      return false;
-  }
+  const cached = containsEmlCache.get(expr);
+  if (cached !== undefined) return cached;
+
+  const value =
+    expr.kind === "eml" ||
+    (isBinaryExpr(expr)
+      ? containsEml(expr.left) || containsEml(expr.right)
+      : isUnaryExpr(expr)
+        ? containsEml(expr.value)
+        : false);
+  containsEmlCache.set(expr, value);
+  return value;
 }
 
 function liftExactPureForms(expr: Expr): Expr {
@@ -376,56 +434,13 @@ function liftExactPureForms(expr: Expr): Expr {
   for (const pattern of getExactPurePatterns()) {
     const bindings = matchPattern(pattern.pattern, expr);
     if (bindings) {
-      const lifted = pattern.build(bindings, liftExactPureForms);
+      const lifted = instantiatePattern(pattern.replacement, bindings, liftExactPureForms);
       exactPureLiftCache.set(expr, lifted);
       return lifted;
     }
   }
 
-  let rebuilt = expr;
-  switch (expr.kind) {
-    case "eml":
-    case "add":
-    case "sub":
-    case "mul":
-    case "div":
-    case "pow":
-      rebuilt = {
-        ...expr,
-        left: liftExactPureForms(expr.left),
-        right: liftExactPureForms(expr.right),
-      };
-      break;
-    case "neg":
-    case "exp":
-    case "ln":
-    case "sqrt":
-    case "sin":
-    case "cos":
-    case "tan":
-    case "cot":
-    case "sec":
-    case "csc":
-    case "sinh":
-    case "cosh":
-    case "tanh":
-    case "coth":
-    case "sech":
-    case "csch":
-    case "asin":
-    case "acos":
-    case "atan":
-    case "asec":
-    case "acsc":
-    case "acot":
-    case "asinh":
-    case "acosh":
-    case "atanh":
-      rebuilt = { ...expr, value: liftExactPureForms(expr.value) };
-      break;
-    default:
-      break;
-  }
+  const rebuilt = rewriteChildren(expr, liftExactPureForms);
 
   const normalized = applyRules(rebuilt, coreRewriteRules);
   const lifted = compareReadable(normalized, rebuilt) < 0 ? normalized : rebuilt;
@@ -437,50 +452,7 @@ function foldExactSubexpressions(expr: Expr): Expr {
   const cached = exactFoldCache.get(expr);
   if (cached) return cached;
 
-  let rebuilt = expr;
-  switch (expr.kind) {
-    case "eml":
-    case "add":
-    case "sub":
-    case "mul":
-    case "div":
-    case "pow":
-      rebuilt = {
-        ...expr,
-        left: foldExactSubexpressions(expr.left),
-        right: foldExactSubexpressions(expr.right),
-      };
-      break;
-    case "neg":
-    case "exp":
-    case "ln":
-    case "sqrt":
-    case "sin":
-    case "cos":
-    case "tan":
-    case "cot":
-    case "sec":
-    case "csc":
-    case "sinh":
-    case "cosh":
-    case "tanh":
-    case "coth":
-    case "sech":
-    case "csch":
-    case "asin":
-    case "acos":
-    case "atan":
-    case "asec":
-    case "acsc":
-    case "acot":
-    case "asinh":
-    case "acosh":
-    case "atanh":
-      rebuilt = { ...expr, value: foldExactSubexpressions(expr.value) };
-      break;
-    default:
-      break;
-  }
+  const rebuilt = rewriteChildren(expr, foldExactSubexpressions);
 
   let folded = rebuilt;
   if (!containsVariable(rebuilt)) {
@@ -496,105 +468,74 @@ function foldExactSubexpressions(expr: Expr): Expr {
   return result;
 }
 
+const foldBasicRule: RewriteRule = {
+  name: "fold-basic",
+  apply(expr) {
+    switch (expr.kind) {
+      case "add":
+        if (isZero(expr.left)) return [expr.right];
+        if (isZero(expr.right)) return [expr.left];
+        break;
+      case "sub":
+        if (isZero(expr.right)) return [expr.left];
+        if (sameValue(expr.left, expr.right)) return [num(0)];
+        break;
+      case "mul":
+        if (isOne(expr.left)) return [expr.right];
+        if (isOne(expr.right)) return [expr.left];
+        if (sameValue(expr.left, expr.right))
+          return [{ kind: "pow", left: expr.left, right: num(2) }];
+        if (expr.left.kind === "div" && isOne(expr.left.left))
+          return [{ kind: "div", left: expr.right, right: expr.left.right }];
+        if (expr.right.kind === "div" && isOne(expr.right.left))
+          return [{ kind: "div", left: expr.left, right: expr.right.right }];
+        break;
+      case "div":
+        if (isOne(expr.right)) return [expr.left];
+        if (sameValue(expr.left, expr.right)) return [num(1)];
+        break;
+      case "pow":
+        if (isOne(expr.right)) return [expr.left];
+        if (isOne(expr.left)) return [expr.left];
+        break;
+      case "neg":
+        if (expr.value.kind === "neg") return [expr.value.value];
+        break;
+      case "ln":
+        if (isOne(expr.value)) return [num(0)];
+        if (expr.value.kind === "exp") return [expr.value.value];
+        break;
+      case "exp":
+        if (expr.value.kind === "ln") return [expr.value.value];
+        break;
+      case "sin":
+        if (expr.value.kind === "asin") return [expr.value.value];
+        break;
+      case "cos":
+        if (expr.value.kind === "acos") return [expr.value.value];
+        break;
+      case "tan":
+        if (expr.value.kind === "atan") return [expr.value.value];
+        break;
+      case "sinh":
+        if (expr.value.kind === "asinh") return [expr.value.value];
+        break;
+      case "cosh":
+        if (expr.value.kind === "acosh") return [expr.value.value];
+        break;
+      case "tanh":
+        if (expr.value.kind === "atanh") return [expr.value.value];
+        break;
+      default:
+        break;
+    }
+    return [];
+  },
+};
+
 export const coreRewriteRules: RewriteRule[] = [
-  {
-    name: "fold-basic",
-    apply(expr) {
-      switch (expr.kind) {
-        case "add":
-          if (isZero(expr.left)) return [expr.right];
-          if (isZero(expr.right)) return [expr.left];
-          break;
-        case "sub":
-          if (isZero(expr.right)) return [expr.left];
-          if (sameValue(expr.left, expr.right)) return [num(0)];
-          break;
-        case "mul":
-          if (isOne(expr.left)) return [expr.right];
-          if (isOne(expr.right)) return [expr.left];
-          if (sameValue(expr.left, expr.right))
-            return [{ kind: "pow", left: expr.left, right: num(2) }];
-          if (expr.left.kind === "div" && isOne(expr.left.left))
-            return [{ kind: "div", left: expr.right, right: expr.left.right }];
-          if (expr.right.kind === "div" && isOne(expr.right.left))
-            return [{ kind: "div", left: expr.left, right: expr.right.right }];
-          break;
-        case "div":
-          if (isOne(expr.right)) return [expr.left];
-          if (sameValue(expr.left, expr.right)) return [num(1)];
-          break;
-        case "pow":
-          if (isOne(expr.right)) return [expr.left];
-          if (isOne(expr.left)) return [expr.left];
-          break;
-        case "neg":
-          if (expr.value.kind === "neg") return [expr.value.value];
-          break;
-        case "ln":
-          if (isOne(expr.value)) return [num(0)];
-          if (expr.value.kind === "exp") return [expr.value.value];
-          break;
-        case "exp":
-          if (expr.value.kind === "ln") return [expr.value.value];
-          break;
-        case "sin":
-          if (expr.value.kind === "asin") return [expr.value.value];
-          break;
-        case "cos":
-          if (expr.value.kind === "acos") return [expr.value.value];
-          break;
-        case "tan":
-          if (expr.value.kind === "atan") return [expr.value.value];
-          break;
-        case "sinh":
-          if (expr.value.kind === "asinh") return [expr.value.value];
-          break;
-        case "cosh":
-          if (expr.value.kind === "acosh") return [expr.value.value];
-          break;
-        case "tanh":
-          if (expr.value.kind === "atanh") return [expr.value.value];
-          break;
-        default:
-          break;
-      }
-      return [];
-    },
-  },
-  {
-    name: "eml-short-neg",
-    apply(expr) {
-      const match = matchPattern(SHORT_NEG_PATTERN, expr);
-      const x = match?._x;
-      return x ? [{ kind: "neg", value: x }] : [];
-    },
-  },
-  {
-    name: "eml-short-inv",
-    apply(expr) {
-      const match = matchPattern(SHORT_INV_PATTERN, expr);
-      const x = match?._x;
-      return x ? [{ kind: "div", left: num(1), right: x }] : [];
-    },
-  },
-  {
-    name: "eml-short-mul",
-    apply(expr) {
-      const match = matchPattern(SHORT_MUL_PATTERN, expr);
-      const x = match?._x;
-      const y = match?._y;
-      return x && y ? [{ kind: "mul", left: x, right: y }] : [];
-    },
-  },
-  {
-    name: "eml-short-div",
-    apply(expr) {
-      const match = matchPattern(SHORT_DIV_PATTERN, expr);
-      const x = match?._x;
-      const y = match?._y;
-      return x && y ? [{ kind: "div", left: x, right: y }] : [];
-    },
-  },
+  foldBasicRule,
+  ...getShortTemplateRules(),
   {
     name: "sub-exp-ln->eml",
     apply(expr) {
@@ -646,169 +587,54 @@ export const coreRewriteRules: RewriteRule[] = [
     name: "algebraic-forms",
     apply(expr) {
       const out: Expr[] = [];
-      if (expr.kind === "exp" && expr.value.kind === "add") {
-        const { left, right } = expr.value;
-        if (left.kind === "ln" && right.kind === "ln")
-          out.push({ kind: "mul", left: left.value, right: right.value });
-      }
-      if (expr.kind === "exp" && expr.value.kind === "sub") {
-        const { left, right } = expr.value;
-        if (left.kind === "ln" && right.kind === "ln")
-          out.push({ kind: "div", left: left.value, right: right.value });
-      }
-      if (expr.kind === "exp" && expr.value.kind === "mul") {
-        const { left, right } = expr.value;
-        if (left.kind === "ln") out.push({ kind: "pow", left: left.value, right });
-        if (right.kind === "ln") out.push({ kind: "pow", left: right.value, right: left });
-      }
-      if (expr.kind === "pow" && expr.right.kind === "num" && expr.right.value === 0.5) {
-        out.push({ kind: "sqrt", value: expr.left });
-      }
-      if (expr.kind === "sub" && isZero(expr.left)) {
-        out.push({ kind: "neg", value: expr.right });
-      }
-      if (expr.kind === "sub" && expr.right.kind === "neg") {
-        out.push({ kind: "add", left: expr.left, right: expr.right.value });
-      }
-      if (
-        expr.kind === "div" &&
-        expr.left.kind === "sin" &&
-        expr.right.kind === "cos" &&
-        sameValue(expr.left.value, expr.right.value)
-      ) {
-        out.push({ kind: "tan", value: expr.left.value });
-      }
-      if (
-        expr.kind === "div" &&
-        expr.left.kind === "cos" &&
-        expr.right.kind === "sin" &&
-        sameValue(expr.left.value, expr.right.value)
-      ) {
-        out.push({ kind: "cot", value: expr.left.value });
-      }
-      if (expr.kind === "div" && isOne(expr.left) && expr.right.kind === "cos") {
-        out.push({ kind: "sec", value: expr.right.value });
-      }
-      if (expr.kind === "div" && isOne(expr.left) && expr.right.kind === "sin") {
-        out.push({ kind: "csc", value: expr.right.value });
-      }
-      if (
-        expr.kind === "div" &&
-        expr.left.kind === "sinh" &&
-        expr.right.kind === "cosh" &&
-        sameValue(expr.left.value, expr.right.value)
-      ) {
-        out.push({ kind: "tanh", value: expr.left.value });
-      }
-      if (
-        expr.kind === "div" &&
-        expr.left.kind === "cosh" &&
-        expr.right.kind === "sinh" &&
-        sameValue(expr.left.value, expr.right.value)
-      ) {
-        out.push({ kind: "coth", value: expr.left.value });
-      }
-      if (expr.kind === "div" && isOne(expr.left) && expr.right.kind === "cosh") {
-        out.push({ kind: "sech", value: expr.right.value });
-      }
-      if (expr.kind === "div" && isOne(expr.left) && expr.right.kind === "sinh") {
-        out.push({ kind: "csch", value: expr.right.value });
-      }
+      addTemplateMatches(expr, getAlgebraicTemplates(), out);
       return out;
     },
   },
 ];
 
-function replaceAtPath(expr: Expr, path: number[], replacement: Expr): Expr {
-  if (path.length === 0) return replacement;
-  const [head, ...rest] = path;
-  switch (expr.kind) {
-    case "eml":
-    case "add":
-    case "sub":
-    case "mul":
-    case "div":
-    case "pow":
-      return head === 0
-        ? { ...expr, left: replaceAtPath(expr.left, rest, replacement) }
-        : { ...expr, right: replaceAtPath(expr.right, rest, replacement) };
-    case "neg":
-    case "exp":
-    case "ln":
-    case "sqrt":
-    case "sin":
-    case "cos":
-    case "tan":
-    case "cot":
-    case "sec":
-    case "csc":
-    case "sinh":
-    case "cosh":
-    case "tanh":
-    case "coth":
-    case "sech":
-    case "csch":
-    case "asin":
-    case "acos":
-    case "atan":
-    case "asec":
-    case "acsc":
-    case "acot":
-    case "asinh":
-    case "acosh":
-    case "atanh":
-      return { ...expr, value: replaceAtPath(expr.value, rest, replacement) };
-    default:
-      throw new Error("Bad path");
+function replaceAtPath(expr: Expr, path: readonly number[], replacement: Expr, depth = 0): Expr {
+  if (depth >= path.length) return replacement;
+  const head = path[depth];
+  if (isBinaryExpr(expr)) {
+    return head === 0
+      ? { ...expr, left: replaceAtPath(expr.left, path, replacement, depth + 1) }
+      : { ...expr, right: replaceAtPath(expr.right, path, replacement, depth + 1) };
   }
+  if (isUnaryExpr(expr)) {
+    return { ...expr, value: replaceAtPath(expr.value, path, replacement, depth + 1) };
+  }
+  throw new Error("Bad path");
 }
 
-function collect(
-  expr: Expr,
-  path: number[] = [],
-  out: Array<{ path: number[]; expr: Expr }> = [],
-): Array<{ path: number[]; expr: Expr }> {
-  out.push({ path, expr });
-  switch (expr.kind) {
-    case "eml":
-    case "add":
-    case "sub":
-    case "mul":
-    case "div":
-    case "pow":
-      collect(expr.left, [...path, 0], out);
-      collect(expr.right, [...path, 1], out);
-      break;
-    case "neg":
-    case "exp":
-    case "ln":
-    case "sqrt":
-    case "sin":
-    case "cos":
-    case "tan":
-    case "cot":
-    case "sec":
-    case "csc":
-    case "sinh":
-    case "cosh":
-    case "tanh":
-    case "coth":
-    case "sech":
-    case "csch":
-    case "asin":
-    case "acos":
-    case "atan":
-    case "asec":
-    case "acsc":
-    case "acot":
-    case "asinh":
-    case "acosh":
-    case "atanh":
-      collect(expr.value, [...path, 0], out);
-      break;
-    default:
-      break;
-  }
+function collectNeighbors(root: Expr, rules: readonly RewriteRule[]): Expr[] {
+  const out: Expr[] = [];
+  const path: number[] = [];
+
+  const visit = (expr: Expr): void => {
+    for (const rule of rules) {
+      for (const candidate of rule.apply(expr)) {
+        out.push(replaceAtPath(root, path, candidate));
+      }
+    }
+
+    if (isBinaryExpr(expr)) {
+      path.push(0);
+      visit(expr.left);
+      path[path.length - 1] = 1;
+      visit(expr.right);
+      path.pop();
+      return;
+    }
+
+    if (isUnaryExpr(expr)) {
+      path.push(0);
+      visit(expr.value);
+      path.pop();
+    }
+  };
+
+  visit(root);
   return out;
 }
 
@@ -818,8 +644,12 @@ export interface SearchOptions {
   rules?: RewriteRule[];
 }
 
+const tokenCountCache = new WeakMap<Expr, number>();
+const typeCountCache = new WeakMap<Expr, number>();
 const tokenScoreCache = new WeakMap<Expr, number>();
+const readabilityPenaltyCache = new WeakMap<Expr, number>();
 const exprKeyCache = new WeakMap<Expr, string>();
+const applyRulesCache = new WeakMap<ReadonlyArray<RewriteRule>, WeakMap<Expr, Expr>>();
 
 function exprKey(expr: Expr): string {
   const cached = exprKeyCache.get(expr);
@@ -829,32 +659,57 @@ function exprKey(expr: Expr): string {
   return key;
 }
 
+function tokenCount(expr: Expr): number {
+  const cached = tokenCountCache.get(expr);
+  if (cached !== undefined) return cached;
+  const count = countTokens(expr);
+  tokenCountCache.set(expr, count);
+  return count;
+}
+
+function typeCount(expr: Expr): number {
+  const cached = typeCountCache.get(expr);
+  if (cached !== undefined) return cached;
+  const count = countTypes(expr);
+  typeCountCache.set(expr, count);
+  return count;
+}
+
 function tokenScore(expr: Expr): number {
   const cached = tokenScoreCache.get(expr);
   if (cached !== undefined) return cached;
-  const score = countTokens(expr) + 0.05 * countTypes(expr);
+  const score = tokenCount(expr) + 0.05 * typeCount(expr);
   tokenScoreCache.set(expr, score);
   return score;
 }
 
 function readabilityPenalty(expr: Expr): number {
+  const cached = readabilityPenaltyCache.get(expr);
+  if (cached !== undefined) return cached;
+
+  let penalty: number;
   switch (expr.kind) {
     case "mul":
-      return (
+      penalty =
         (sameValue(expr.left, expr.right) ? 4 : 1) +
         readabilityPenalty(expr.left) +
-        readabilityPenalty(expr.right)
-      );
+        readabilityPenalty(expr.right);
+      break;
     case "add":
-      return 1 + readabilityPenalty(expr.left) + readabilityPenalty(expr.right);
+      penalty = 1 + readabilityPenalty(expr.left) + readabilityPenalty(expr.right);
+      break;
     case "sub":
-      return 2 + readabilityPenalty(expr.left) + readabilityPenalty(expr.right);
+      penalty = 2 + readabilityPenalty(expr.left) + readabilityPenalty(expr.right);
+      break;
     case "pow":
-      return readabilityPenalty(expr.left) + readabilityPenalty(expr.right);
+      penalty = readabilityPenalty(expr.left) + readabilityPenalty(expr.right);
+      break;
     case "div":
-      return readabilityPenalty(expr.left) + readabilityPenalty(expr.right);
+      penalty = readabilityPenalty(expr.left) + readabilityPenalty(expr.right);
+      break;
     case "eml":
-      return 3 + readabilityPenalty(expr.left) + readabilityPenalty(expr.right);
+      penalty = 3 + readabilityPenalty(expr.left) + readabilityPenalty(expr.right);
+      break;
     case "neg":
     case "exp":
     case "ln":
@@ -880,84 +735,58 @@ function readabilityPenalty(expr: Expr): number {
     case "asinh":
     case "acosh":
     case "atanh":
-      return readabilityPenalty(expr.value);
+      penalty = readabilityPenalty(expr.value);
+      break;
     default:
-      return 0;
+      penalty = 0;
+      break;
   }
+
+  readabilityPenaltyCache.set(expr, penalty);
+  return penalty;
 }
 
 function compareReadable(a: Expr, b: Expr): number {
-  const tokenDiff = countTokens(a) - countTokens(b);
+  const tokenDiff = tokenCount(a) - tokenCount(b);
   if (tokenDiff !== 0) return tokenDiff;
   const readabilityDiff = readabilityPenalty(a) - readabilityPenalty(b);
   if (readabilityDiff !== 0) return readabilityDiff;
-  const typeDiff = countTypes(a) - countTypes(b);
+  const typeDiff = typeCount(a) - typeCount(b);
   if (typeDiff !== 0) return typeDiff;
   return exprKey(a).localeCompare(exprKey(b));
 }
 
-function rewriteGreedy(expr: Expr, rules: RewriteRule[]): Expr {
+function iterateUntilStable(expr: Expr, limit: number, step: (current: Expr) => Expr): Expr {
   let current = expr;
-  for (let iter = 0; iter < 24; iter += 1) {
-    const next = rewriteGreedyStep(current, rules);
+  for (let iter = 0; iter < limit; iter += 1) {
+    const next = step(current);
     if (exprKey(next) === exprKey(current)) return current;
     current = next;
   }
   return current;
 }
 
+function rewriteGreedy(expr: Expr, rules: RewriteRule[]): Expr {
+  return iterateUntilStable(expr, 24, (current) => rewriteGreedyStep(current, rules));
+}
+
 function rewriteGreedyStep(expr: Expr, rules: RewriteRule[]): Expr {
   const direct = applyRules(expr, rules);
-  let base = expr;
-  switch (expr.kind) {
-    case "eml":
-    case "add":
-    case "sub":
-    case "mul":
-    case "div":
-    case "pow":
-      base = {
-        ...expr,
-        left: rewriteGreedyStep(expr.left, rules),
-        right: rewriteGreedyStep(expr.right, rules),
-      };
-      break;
-    case "neg":
-    case "exp":
-    case "ln":
-    case "sqrt":
-    case "sin":
-    case "cos":
-    case "tan":
-    case "cot":
-    case "sec":
-    case "csc":
-    case "sinh":
-    case "cosh":
-    case "tanh":
-    case "coth":
-    case "sech":
-    case "csch":
-    case "asin":
-    case "acos":
-    case "atan":
-    case "asec":
-    case "acsc":
-    case "acot":
-    case "asinh":
-    case "acosh":
-    case "atanh":
-      base = { ...expr, value: rewriteGreedyStep(expr.value, rules) };
-      break;
-    default:
-      break;
-  }
+  const base = rewriteChildren(expr, (child) => rewriteGreedyStep(child, rules));
 
   const rewrittenBase = applyRules(base, rules);
   return compareReadable(direct, rewrittenBase) <= 0 ? direct : rewrittenBase;
 }
 
 function applyRules(expr: Expr, rules: RewriteRule[]): Expr {
+  let ruleCache = applyRulesCache.get(rules);
+  if (!ruleCache) {
+    ruleCache = new WeakMap<Expr, Expr>();
+    applyRulesCache.set(rules, ruleCache);
+  }
+  const cached = ruleCache.get(expr);
+  if (cached) return cached;
+
   let best = expr;
   for (const rule of rules) {
     for (const candidate of rule.apply(expr)) {
@@ -966,17 +795,12 @@ function applyRules(expr: Expr, rules: RewriteRule[]): Expr {
       }
     }
   }
+  ruleCache.set(expr, best);
   return best;
 }
 
 function canonicalizeReadable(expr: Expr, rules: RewriteRule[]): Expr {
-  let current = expr;
-  for (let i = 0; i < 16; i += 1) {
-    const next = rewriteGreedyStep(current, rules);
-    if (exprKey(next) === exprKey(current)) return current;
-    current = next;
-  }
-  return current;
+  return iterateUntilStable(expr, 16, (current) => rewriteGreedyStep(current, rules));
 }
 
 function optimize(root: Expr, options: SearchOptions = {}): Expr {
@@ -1006,14 +830,7 @@ function optimize(root: Expr, options: SearchOptions = {}): Expr {
     const next =
       neighborCache.get(key) ??
       (() => {
-        const neighbors: Expr[] = [];
-        for (const { path, expr } of collect(current)) {
-          for (const rule of rules) {
-            for (const candidate of rule.apply(expr)) {
-              neighbors.push(replaceAtPath(current, path, candidate));
-            }
-          }
-        }
+        const neighbors = collectNeighbors(current, rules);
         neighborCache.set(key, neighbors);
         return neighbors;
       })();
@@ -1042,4 +859,12 @@ export function simplifyToElementary(root: Expr, options: SearchOptions = {}): E
   const optimized = optimize(lifted, { ...options, rules });
   const polished = foldExactSubexpressions(liftExactPureForms(optimized));
   return canonicalizeReadable(polished, rules);
+}
+
+export function reduceTokensString(root: Expr, options: SearchOptions = {}): string {
+  return toString(reduceTokens(root, options));
+}
+
+export function simplifyToElementaryString(root: Expr, options: SearchOptions = {}): string {
+  return toString(simplifyToElementary(root, options));
 }

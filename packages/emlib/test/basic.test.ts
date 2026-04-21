@@ -5,8 +5,10 @@ import {
   evaluateLossless,
   parse,
   reduceTokens,
+  reduceTokensString,
   reduceTypes,
   simplifyToElementary,
+  simplifyToElementaryString,
   synthesizePureEml,
   toPureEml,
   toString,
@@ -105,11 +107,23 @@ test("simplifyToElementary recognizes the new compact witnesses", () => {
   expect(toString(simplifyToElementary(toPureEml(parse("1/9"))))).toBe("1/9");
   expect(toString(simplifyToElementary(toPureEml(parse("sqrt(x)"))))).toBe("sqrt(x)");
   expect(toString(simplifyToElementary(toPureEml(parse("tan(x)"))))).toBe("tan(x)");
-  // TODO: fix next line
-  // expect(toString(simplifyToElementary(toPureEml(parse("sin(x)/tan(x)"))))).toBe("cos(x)");
+  expect(toString(simplifyToElementary(toPureEml(parse("sin(x)/tan(x)"))))).toBe("cos(x)");
+  expect(toString(simplifyToElementary(toPureEml(parse("sinh(x)/tanh(x)"))))).toBe("cosh(x)");
+  expect(toString(simplifyToElementary(toPureEml(parse("tan(x)*cos(x)"))))).toBe("sin(x)");
+  expect(toString(simplifyToElementary(toPureEml(parse("coth(x)*sinh(x)"))))).toBe("cosh(x)");
   expect(toString(simplifyToElementary(toPureEml(parse("sin(x+y)"))))).toBe("sin(x+y)");
   expect(toString(simplifyToElementary(toPureEml(parse("sin(x)/cos(y)"))))).toBe("sin(x)/cos(y)");
   expect(toString(simplifyToElementary(toPureEml(parse("sin(x)/cos(x)"))))).toBe("tan(x)");
+});
+
+test("placeholder matching does not treat real underscore-prefixed variables as holes", () => {
+  expect(toString(simplifyToElementary(toPureEml(parse("sin(_x)"))))).toBe("sin(_x)");
+});
+
+test("string sugar renders simplified ASTs directly", () => {
+  expect(simplifyToElementaryString(toPureEml(parse("sin(x)/tan(x)")))).toBe("cos(x)");
+  expect(simplifyToElementaryString(toPureEml(parse("tan(x)")))).toBe("tan(x)");
+  expect(reduceTokensString(parse("exp(x) - ln(y)"))).toBe("E(x,y)");
 });
 
 test("compact EML witnesses stay numerically equivalent on arithmetic samples", () => {
