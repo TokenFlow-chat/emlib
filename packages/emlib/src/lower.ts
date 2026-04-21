@@ -1,10 +1,10 @@
-import type { Expr } from './ast';
-import { eml, exprEquals, isNumericValue, num, variable } from './ast';
-import { countTokens } from './analyze';
-import { desugarElementary } from './elementary';
-import { parseRationalLiteral } from './numeric';
-import { toString } from './print';
-import { compressPureEml, type CompressionLevel, type SampleEnv } from './synth';
+import type { Expr } from "./ast";
+import { eml, exprEquals, isNumericValue, num, variable } from "./ast";
+import { countTokens } from "./analyze";
+import { desugarElementary } from "./elementary";
+import { parseRationalLiteral } from "./numeric";
+import { toString } from "./print";
+import { compressPureEml, type CompressionLevel, type SampleEnv } from "./synth";
 
 export interface LowerOptions {
   strict?: boolean;
@@ -81,44 +81,53 @@ function chooseShortest(...candidates: Expr[]): Expr {
   for (const candidate of seen.values()) {
     best = best ? betterExpr(best, candidate) : candidate;
   }
-  if (!best) throw new Error('Expected at least one lowering candidate');
+  if (!best) throw new Error("Expected at least one lowering candidate");
   return best;
 }
 
 function compressionCacheKey(expr: Expr, options: LowerOptions): string {
-  const sampleKey = (samples?: SampleEnv[]) => samples
-    ? samples.map((env) => Object.keys(env).sort().map((key) => `${key}:${env[key]}`).join(',')).join(';')
-    : '';
+  const sampleKey = (samples?: SampleEnv[]) =>
+    samples
+      ? samples
+          .map((env) =>
+            Object.keys(env)
+              .sort()
+              .map((key) => `${key}:${env[key]}`)
+              .join(","),
+          )
+          .join(";")
+      : "";
   return [
     exprKey(expr),
-    String(options.compression ?? 'off'),
-    String(options.compressionBeamWidth ?? ''),
-    String(options.compressionMaxLeaves ?? ''),
-    String(options.maxDelta ?? ''),
-    String(options.minTokenGain ?? ''),
+    String(options.compression ?? "off"),
+    String(options.compressionBeamWidth ?? ""),
+    String(options.compressionMaxLeaves ?? ""),
+    String(options.maxDelta ?? ""),
+    String(options.minTokenGain ?? ""),
     sampleKey(options.compressionSamples),
     sampleKey(options.validationSamples),
-  ].join('|');
+  ].join("|");
 }
 
 function maybeCompressPureEml(expr: Expr, options: LowerOptions): Expr {
-  const compression = options.compression ?? 'off';
-  if (compression === 'off' || compression === 0) return expr;
+  const compression = options.compression ?? "off";
+  if (compression === "off" || compression === 0) return expr;
   if (tokenCost(expr) < 9) return expr;
 
   const key = compressionCacheKey(expr, options);
   const cached = compressionCache.get(key);
   if (cached) return cached;
 
-  const compressed = compressPureEml(expr, {
-    compression,
-    samples: options.compressionSamples,
-    validationSamples: options.validationSamples,
-    beamWidth: options.compressionBeamWidth,
-    maxLeaves: options.compressionMaxLeaves,
-    maxDelta: options.maxDelta,
-    minTokenGain: options.minTokenGain,
-  })?.expr ?? expr;
+  const compressed =
+    compressPureEml(expr, {
+      compression,
+      samples: options.compressionSamples,
+      validationSamples: options.validationSamples,
+      beamWidth: options.compressionBeamWidth,
+      maxLeaves: options.compressionMaxLeaves,
+      maxDelta: options.maxDelta,
+      minTokenGain: options.minTokenGain,
+    })?.expr ?? expr;
 
   setCapped(compressionCache, key, compressed, 1024);
   return compressed;
@@ -180,10 +189,7 @@ function emlAdd(a: Expr, b: Expr): Expr {
   const key = ak <= bk ? `${ak}|${bk}` : `${bk}|${ak}`;
   const cached = addCache.get(key);
   if (cached) return cached;
-  const value = chooseShortest(
-    emlSub(a, emlNeg(b)),
-    emlSub(b, emlNeg(a)),
-  );
+  const value = chooseShortest(emlSub(a, emlNeg(b)), emlSub(b, emlNeg(a)));
   setCapped(addCache, key, value);
   return value;
 }
@@ -210,10 +216,7 @@ function emlMul(a: Expr, b: Expr): Expr {
     eml(
       ONE,
       eml(
-        eml(
-          eml(ONE, eml(eml(ONE, eml(ONE, a)), ONE)),
-          eml(ONE, eml(eml(ONE, eml(b, ONE)), ONE)),
-        ),
+        eml(eml(ONE, eml(eml(ONE, eml(ONE, a)), ONE)), eml(ONE, eml(eml(ONE, eml(b, ONE)), ONE))),
         ONE,
       ),
     ),
@@ -229,10 +232,7 @@ function emlDiv(a: Expr, b: Expr): Expr {
   const key = `${exprKey(a)}|${exprKey(b)}`;
   const cached = divCache.get(key);
   if (cached) return cached;
-  const value = chooseShortest(
-    emlMul(a, emlInv(b)),
-    emlExp(emlAdd(emlLn(a), emlNeg(emlLn(b)))),
-  );
+  const value = chooseShortest(emlMul(a, emlInv(b)), emlExp(emlAdd(emlLn(a), emlNeg(emlLn(b)))));
   setCapped(divCache, key, value);
   return value;
 }
@@ -257,7 +257,7 @@ function emlTwo(): Expr {
 }
 
 function exactRational(expr: Expr): { num: bigint; den: bigint } | null {
-  if (expr.kind !== 'num') return null;
+  if (expr.kind !== "num") return null;
   const value = parseRationalLiteral(expr.raw);
   return { num: value.num, den: value.den };
 }
@@ -333,7 +333,10 @@ function emlRational(p: bigint, q: bigint): Expr {
   if (q === 1n) return emlInt(p);
   const numerator = emlInt(p < 0n ? -p : p);
   const denominator = emlInt(q);
-  const magnitudeCandidates = [emlDiv(numerator, denominator), emlMul(numerator, emlInv(denominator))];
+  const magnitudeCandidates = [
+    emlDiv(numerator, denominator),
+    emlMul(numerator, emlInv(denominator)),
+  ];
   if (p === 1n || p === -1n) {
     magnitudeCandidates.push(emlInv(denominator));
   }
@@ -348,17 +351,17 @@ function lowerNumber(raw: string): Expr {
   return emlRational(p, q);
 }
 
-function lowerConst(name: 'e' | 'pi' | 'i'): Expr {
-  if (name === 'e') {
+function lowerConst(name: "e" | "pi" | "i"): Expr {
+  if (name === "e") {
     return emlExp(ONE);
   }
-  if (name === 'i') {
+  if (name === "i") {
     iCache ??= emlExp(emlDiv(emlLn(emlNegativeOne()), emlTwo()));
     return iCache;
   }
   piCache ??= chooseShortest(
-    emlNeg(emlMul(lowerConst('i'), emlLn(emlNegativeOne()))),
-    emlDiv(emlLn(emlNegativeOne()), lowerConst('i')),
+    emlNeg(emlMul(lowerConst("i"), emlLn(emlNegativeOne()))),
+    emlDiv(emlLn(emlNegativeOne()), lowerConst("i")),
   );
   return piCache;
 }
@@ -386,36 +389,36 @@ export function reduceTypes(expr: Expr, options: LowerOptions = {}): Expr {
 
     let result: Expr;
     switch (node.kind) {
-      case 'var':
+      case "var":
         result = variable(node.name);
         break;
-      case 'num':
+      case "num":
         result = lowerNumber(node.raw);
         break;
-      case 'const':
+      case "const":
         result = lowerConst(node.name);
         break;
-      case 'eml':
+      case "eml":
         result = eml(lower(node.left), lower(node.right));
         break;
-      case 'exp':
-        result = node.value.kind === 'ln' ? lower(node.value.value) : emlExp(lower(node.value));
+      case "exp":
+        result = node.value.kind === "ln" ? lower(node.value.value) : emlExp(lower(node.value));
         break;
-      case 'ln':
-        result = node.value.kind === 'exp' ? lower(node.value.value) : emlLn(lower(node.value));
+      case "ln":
+        result = node.value.kind === "exp" ? lower(node.value.value) : emlLn(lower(node.value));
         break;
-      case 'neg':
+      case "neg":
         if (isZeroExpr(node.value)) {
           result = emlZero();
           break;
         }
-        if (node.value.kind === 'neg') {
+        if (node.value.kind === "neg") {
           result = lower(node.value.value);
           break;
         }
         result = emlNeg(lower(node.value));
         break;
-      case 'add':
+      case "add":
         if (isZeroExpr(node.left)) {
           result = lower(node.right);
           break;
@@ -424,22 +427,22 @@ export function reduceTypes(expr: Expr, options: LowerOptions = {}): Expr {
           result = lower(node.left);
           break;
         }
-        if (node.left.kind === 'neg') {
+        if (node.left.kind === "neg") {
           result = emlSub(lower(node.right), lower(node.left.value));
           break;
         }
-        if (node.right.kind === 'neg') {
+        if (node.right.kind === "neg") {
           result = emlSub(lower(node.left), lower(node.right.value));
           break;
         }
         result = emlAdd(lower(node.left), lower(node.right));
         break;
-      case 'sub':
+      case "sub":
         if (exprEquals(node.left, node.right)) {
           result = emlZero();
           break;
         }
-        if (node.left.kind === 'exp' && node.right.kind === 'ln') {
+        if (node.left.kind === "exp" && node.right.kind === "ln") {
           result = eml(lower(node.left.value), lower(node.right.value));
           break;
         }
@@ -451,13 +454,13 @@ export function reduceTypes(expr: Expr, options: LowerOptions = {}): Expr {
           result = emlNeg(lower(node.right));
           break;
         }
-        if (node.right.kind === 'neg') {
+        if (node.right.kind === "neg") {
           result = emlAdd(lower(node.left), lower(node.right.value));
           break;
         }
         result = emlSub(lower(node.left), lower(node.right));
         break;
-      case 'mul':
+      case "mul":
         if (isZeroExpr(node.left) || isZeroExpr(node.right)) {
           result = emlZero();
           break;
@@ -480,7 +483,7 @@ export function reduceTypes(expr: Expr, options: LowerOptions = {}): Expr {
         }
         result = emlMul(lower(node.left), lower(node.right));
         break;
-      case 'div':
+      case "div":
         if (isZeroExpr(node.left)) {
           result = emlZero();
           break;
@@ -499,7 +502,7 @@ export function reduceTypes(expr: Expr, options: LowerOptions = {}): Expr {
         }
         result = emlDiv(lower(node.left), lower(node.right));
         break;
-      case 'pow': {
+      case "pow": {
         if (isOneExpr(node.right)) {
           result = lower(node.left);
           break;
@@ -514,7 +517,12 @@ export function reduceTypes(expr: Expr, options: LowerOptions = {}): Expr {
         }
         const rationalExponent = exactRational(node.right);
         const loweredBase = lower(node.left);
-        if (rationalExponent && rationalExponent.den === 1n && rationalExponent.num >= -8n && rationalExponent.num <= 8n) {
+        if (
+          rationalExponent &&
+          rationalExponent.den === 1n &&
+          rationalExponent.num >= -8n &&
+          rationalExponent.num <= 8n
+        ) {
           result = emlPowInteger(loweredBase, rationalExponent.num);
           break;
         }
@@ -525,7 +533,7 @@ export function reduceTypes(expr: Expr, options: LowerOptions = {}): Expr {
         result = emlPow(loweredBase, lower(node.right));
         break;
       }
-      case 'sqrt':
+      case "sqrt":
         result = emlExp(emlDiv(emlLn(lower(node.value)), emlTwo()));
         break;
       default:
@@ -559,7 +567,7 @@ export function standardCoreLibrary() {
     mul: emlMul,
     div: emlDiv,
     pow: emlPow,
-    i: lowerConst('i'),
-    pi: lowerConst('pi'),
+    i: lowerConst("i"),
+    pi: lowerConst("pi"),
   };
 }

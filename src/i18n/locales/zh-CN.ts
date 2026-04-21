@@ -3,8 +3,7 @@ import type { MessageDictionary } from "@/i18n/schema";
 export const zhCN = {
   app: {
     title: "EML Playground",
-    metaDescription:
-      "一个前端 EML playground，用来查看论文、emlib lowering 和 D2 SVG 渲染。",
+    metaDescription: "一个前端 EML playground，用来查看论文、emlib lowering 和 D2 SVG 渲染。",
     languageLabel: "语言",
     nav: {
       overview: "概览",
@@ -88,8 +87,7 @@ export const zhCN = {
   summary: {
     paper: {
       title: "论文核心内容",
-      description:
-        "页面只保留和实现直接相关的部分：算子本身、统一语法，以及让构造成立的复数语义。",
+      description: "页面只保留和实现直接相关的部分：算子本身、统一语法，以及让构造成立的复数语义。",
       formulaLabel: "核心公式",
       formulaDescription:
         "关键点在结构上：exp 和 ln 可以被包进同一个可重复节点，然后在整棵表达式树里反复使用。",
@@ -110,8 +108,7 @@ export const zhCN = {
     },
     emlib: {
       title: "emlib 的功能",
-      description:
-        "下面这些卡片，对应 packages/emlib 的主要 API。",
+      description: "下面这些卡片，对应 packages/emlib 的主要 API。",
       capabilities: [
         {
           title: "Parse / Analyze",
@@ -122,8 +119,7 @@ export const zhCN = {
         {
           title: "Lower / Rewrite",
           text: "压到纯 EML，或继续找更短写法。",
-          detail:
-            "reduceTypes, toPureEml, reduceTokens, simplifyToElementary, compressPureEml",
+          detail: "reduceTypes, toPureEml, reduceTokens, simplifyToElementary, compressPureEml",
           useCase: "适合做统一表示、搜索压缩和 token 优化。",
         },
         {
@@ -183,28 +179,19 @@ export const zhCN = {
       pureValueLabel: "Pure EML Value",
       deltaLabel: "|delta|",
     },
-    parseError: ({ detail }: { detail: string }) =>
-      `表达式暂时无法解析：${detail}`,
+    parseError: ({ detail }: { detail: string }) => `表达式暂时无法解析：${detail}`,
     diagram: {
       eyebrow: "SVG Preview",
       titles: {
         standard: "Standard Expression Tree",
         pure: "Pure EML Tree",
       },
-      deferredHint:
-        "预览区接近视口后才会异步加载 D2 运行时，避免把首屏 JS 包得过大。",
+      deferredHint: "预览区接近视口后才会异步加载 D2 运行时，避免把首屏 JS 包得过大。",
       loading: "正在异步加载 D2 并生成 SVG...",
       empty: "输入表达式后会在这里显示 SVG 结构图。",
-      renderError: ({ detail }: { detail: string }) =>
-        `结构图渲染失败：${detail}`,
+      renderError: ({ detail }: { detail: string }) => `结构图渲染失败：${detail}`,
       layoutBadge: ({ layout }: { layout: string }) => `D2 / ${layout}`,
-      pureRenderLimitReason: ({
-        nodeCount,
-        limit,
-      }: {
-        nodeCount: string;
-        limit: string;
-      }) =>
+      pureRenderLimitReason: ({ nodeCount, limit }: { nodeCount: string; limit: string }) =>
         `当前纯 EML 树有 ${nodeCount} 个节点，超过前端预览阈值 ${limit}。可切回 Standard Tree 查看结构。`,
       invalidExpressionReason: "修正表达式后即可恢复图渲染。",
       previewAriaLabel: ({ mode }: { mode: string }) => `${mode} 图预览`,

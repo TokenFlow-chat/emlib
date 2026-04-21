@@ -1,22 +1,10 @@
-import type { Expr } from './ast';
-import {
-  add,
-  div,
-  exp,
-  ln,
-  mul,
-  neg,
-  num,
-  pow,
-  sqrt,
-  sub,
-  constant,
-} from './ast';
+import type { Expr } from "./ast";
+import { add, div, exp, ln, mul, neg, num, pow, sqrt, sub, constant } from "./ast";
 
 const ONE = num(1);
 const TWO = num(2);
 const HALF = num(0.5);
-const I = constant('i');
+const I = constant("i");
 
 function sinCore(z: Expr): Expr {
   const iz = mul(I, z);
@@ -62,76 +50,76 @@ function atanhCore(z: Expr): Expr {
 
 export function desugarElementary(expr: Expr): Expr {
   switch (expr.kind) {
-    case 'num':
-    case 'var':
-    case 'const':
+    case "num":
+    case "var":
+    case "const":
       return expr;
-    case 'eml':
+    case "eml":
       return { ...expr, left: desugarElementary(expr.left), right: desugarElementary(expr.right) };
-    case 'neg':
-    case 'exp':
-    case 'ln':
-    case 'sqrt':
+    case "neg":
+    case "exp":
+    case "ln":
+    case "sqrt":
       return { ...expr, value: desugarElementary(expr.value) };
-    case 'add':
-    case 'sub':
-    case 'mul':
-    case 'div':
-    case 'pow':
+    case "add":
+    case "sub":
+    case "mul":
+    case "div":
+    case "pow":
       return { ...expr, left: desugarElementary(expr.left), right: desugarElementary(expr.right) };
-    case 'sin':
+    case "sin":
       return sinCore(desugarElementary(expr.value));
-    case 'cos':
+    case "cos":
       return cosCore(desugarElementary(expr.value));
-    case 'tan': {
+    case "tan": {
       const z = desugarElementary(expr.value);
       return div(sinCore(z), cosCore(z));
     }
-    case 'cot': {
+    case "cot": {
       const z = desugarElementary(expr.value);
       return div(cosCore(z), sinCore(z));
     }
-    case 'sec': {
+    case "sec": {
       const z = desugarElementary(expr.value);
       return div(ONE, cosCore(z));
     }
-    case 'csc': {
+    case "csc": {
       const z = desugarElementary(expr.value);
       return div(ONE, sinCore(z));
     }
-    case 'sinh':
+    case "sinh":
       return sinhCore(desugarElementary(expr.value));
-    case 'cosh':
+    case "cosh":
       return coshCore(desugarElementary(expr.value));
-    case 'tanh': {
+    case "tanh": {
       const z = desugarElementary(expr.value);
       return div(sinhCore(z), coshCore(z));
     }
-    case 'coth': {
+    case "coth": {
       const z = desugarElementary(expr.value);
       return div(coshCore(z), sinhCore(z));
     }
-    case 'sech':
+    case "sech":
       return div(ONE, coshCore(desugarElementary(expr.value)));
-    case 'csch':
+    case "csch":
       return div(ONE, sinhCore(desugarElementary(expr.value)));
-    case 'asin':
+    case "asin":
       return asinCore(desugarElementary(expr.value));
-    case 'acos':
+    case "acos":
       return acosCore(desugarElementary(expr.value));
-    case 'atan':
+    case "atan":
       return atanCore(desugarElementary(expr.value));
-    case 'asec':
+    case "asec":
       return acosCore(div(ONE, desugarElementary(expr.value)));
-    case 'acsc':
+    case "acsc":
       return asinCore(div(ONE, desugarElementary(expr.value)));
-    case 'acot':
+    case "acot":
       return atanCore(div(ONE, desugarElementary(expr.value)));
-    case 'asinh':
+    case "asinh":
       return asinhCore(desugarElementary(expr.value));
-    case 'acosh':
+    case "acosh":
       return acoshCore(desugarElementary(expr.value));
-    case 'atanh':
+    case "atanh":
       return atanhCore(desugarElementary(expr.value));
   }
 }

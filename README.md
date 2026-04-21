@@ -9,7 +9,7 @@ $$
 $$
 
 inspired by the paper
-[*All elementary functions from a single binary operator*](https://arxiv.org/abs/2603.21852).
+[_All elementary functions from a single binary operator_](https://arxiv.org/abs/2603.21852).
 
 This repository combines two parts:
 

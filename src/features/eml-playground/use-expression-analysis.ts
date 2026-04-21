@@ -1,17 +1,7 @@
-import {
-  analyzeExpr,
-  evaluate,
-  parse,
-  toPureEml,
-  type Expr,
-} from "emlib";
+import { analyzeExpr, evaluate, parse, toPureEml, type Expr } from "emlib";
 import { useDeferredValue, useMemo } from "react";
 
-import {
-  collectVariables,
-  defaultValueForVariable,
-  parseEnvValue,
-} from "./utils";
+import { collectVariables, defaultValueForVariable, parseEnvValue } from "./utils";
 
 type Metrics = ReturnType<typeof analyzeExpr>;
 type ComplexValue = ReturnType<typeof evaluate>;

@@ -1,11 +1,5 @@
 import { emlibCapabilities } from "@/features/eml-playground/constants";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useI18n } from "@/i18n";
 
 export default function SummaryPanels() {
@@ -40,12 +34,8 @@ export default function SummaryPanels() {
                 key={point.title}
                 className="rounded-[0.95rem] border border-[color:var(--line)] bg-white/72 p-4"
               >
-                <div className="font-semibold text-[color:var(--ink)]">
-                  {point.title}
-                </div>
-                <p className="mt-2 text-sm leading-6 text-[color:var(--ink-soft)]">
-                  {point.text}
-                </p>
+                <div className="font-semibold text-[color:var(--ink)]">{point.title}</div>
+                <p className="mt-2 text-sm leading-6 text-[color:var(--ink-soft)]">{point.text}</p>
               </div>
             ))}
           </div>

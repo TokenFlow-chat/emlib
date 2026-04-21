@@ -49,9 +49,9 @@ import {
   reduceTypes,
   toString,
   valueToExpr,
-} from './src/index';
+} from "./src/index";
 
-const expr = parse('exp(x) - ln(y)');
+const expr = parse("exp(x) - ln(y)");
 
 console.log(analyzeExpr(expr));
 // { tokenCount: 5, typeCount: 3, types: ['exp', 'ln', 'sub'] }
@@ -59,7 +59,7 @@ console.log(analyzeExpr(expr));
 console.log(toString(reduceTypes(expr)));
 // pure EML form with only eml(...) and numeric leaves
 
-console.log(toString(reduceTypes(parse('tan(x)'), { compression: 'light' })));
+console.log(toString(reduceTypes(parse("tan(x)"), { compression: "light" })));
 // same pure-EML interface, but allows an extra iterative compression pass
 
 console.log(toString(reduceTokens(expr)));
@@ -68,13 +68,13 @@ console.log(toString(reduceTokens(expr)));
 console.log(exprToD2(expr));
 // D2 source with function / variable / constant node classes
 
-console.log(exprToD2(reduceTypes(parse('ln(x)'))));
+console.log(exprToD2(reduceTypes(parse("ln(x)"))));
 // reduced trees use the same generic D2 visualization
 
-console.log(toString(valueToExpr(evaluateLossless(parse('(1+2*i)/(3-4*i)')))));
+console.log(toString(valueToExpr(evaluateLossless(parse("(1+2*i)/(3-4*i)")))));
 // -1 / 5 + 2 / 5 * i
 
-console.log(evaluate(parse('sin(1/3)')));
+console.log(evaluate(parse("sin(1/3)")));
 // approximate complex value
 ```
 

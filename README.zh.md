@@ -9,7 +9,7 @@ $$
 $$
 
 项目灵感来自论文
-[*All elementary functions from a single binary operator*](https://arxiv.org/abs/2603.21852)。
+[_All elementary functions from a single binary operator_](https://arxiv.org/abs/2603.21852)。
 
 这个仓库主要包含两部分：
 

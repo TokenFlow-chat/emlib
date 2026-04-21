@@ -2,19 +2,21 @@
   "name": "eml",
   "version": "0.1.0",
   "private": true,
-  "type": "module",
   "workspaces": [
     "packages/*"
   ],
+  "type": "module",
   "scripts": {
     "dev": "bun --hot src/index.ts",
     "start": "NODE_ENV=production bun src/index.ts",
     "build": "bun run build.ts",
     "test": "bun test",
+    "fmt": "oxfmt",
+    "fmt:check": "oxfmt --check",
     "lint": "oxlint --react-plugin --deny-warnings src packages/emlib/src packages/emlib/test build.ts",
     "lint:fix": "oxlint --react-plugin --fix src packages/emlib/src packages/emlib/test build.ts",
     "typecheck": "tsgo -p tsconfig.json --noEmit && (cd packages/emlib && bun run build)",
-    "check": "bun run lint && bun run typecheck && bun run test && bun run build"
+    "check": "bun fmt:check && bun lint && bun typecheck && bun test && bun run build"
   },
   "dependencies": {
     "@radix-ui/react-label": "^2.1.8",
@@ -29,10 +31,11 @@
     "tailwind-merge": "^3.5.0"
   },
   "devDependencies": {
-    "@typescript/native-preview": "7.0.0-dev.20260420.1",
     "@types/bun": "latest",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
+    "@typescript/native-preview": "7.0.0-dev.20260420.1",
+    "oxfmt": "^0.46.0",
     "oxlint": "^1.60.0",
     "tailwindcss": "^4.2.2"
   }

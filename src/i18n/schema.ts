@@ -61,14 +61,12 @@ export const baseMessages = {
       {
         label: "Unified Grammar",
         value: "S -> 1 | eml(S, S)",
-        description:
-          "A heterogeneous operator family collapses into a homogeneous tree.",
+        description: "A heterogeneous operator family collapses into a homogeneous tree.",
       },
       {
         label: "Why It Matters",
         value: "Search Space",
-        description:
-          "Useful for symbolic regression, compilation, and symbolic AI.",
+        description: "Useful for symbolic regression, compilation, and symbolic AI.",
       },
     ],
     pipeline: {
@@ -130,8 +128,7 @@ export const baseMessages = {
     },
     emlib: {
       title: "What emlib does",
-      description:
-        "These cards map to the main APIs in packages/emlib.",
+      description: "These cards map to the main APIs in packages/emlib.",
       capabilities: [
         {
           title: "Parse / Analyze",
@@ -142,8 +139,7 @@ export const baseMessages = {
         {
           title: "Lower / Rewrite",
           text: "Lower to pure EML or search for shorter forms.",
-          detail:
-            "reduceTypes, toPureEml, reduceTokens, simplifyToElementary, compressPureEml",
+          detail: "reduceTypes, toPureEml, reduceTokens, simplifyToElementary, compressPureEml",
           useCase: "Good for canonical forms, search compression, and token reduction.",
         },
         {
@@ -183,8 +179,7 @@ export const baseMessages = {
     },
     variables: {
       title: "Variable values",
-      description:
-        "Used only for numeric verification and does not affect the structure diagram.",
+      description: "Used only for numeric verification and does not affect the structure diagram.",
       empty: "The current expression has no free variables.",
     },
     metrics: {
@@ -204,8 +199,7 @@ export const baseMessages = {
       pureValueLabel: "Pure EML Value",
       deltaLabel: "|delta|",
     },
-    parseError: ({ detail }: { detail: string }) =>
-      `The expression could not be parsed: ${detail}`,
+    parseError: ({ detail }: { detail: string }) => `The expression could not be parsed: ${detail}`,
     diagram: {
       eyebrow: "SVG Preview",
       titles: {
@@ -215,23 +209,14 @@ export const baseMessages = {
       deferredHint:
         "The D2 runtime loads only when this area gets close to the viewport, keeping the initial JS bundle smaller.",
       loading: "Loading the D2 runtime and generating the SVG...",
-      empty:
-        "The SVG structure diagram will appear here after you enter an expression.",
+      empty: "The SVG structure diagram will appear here after you enter an expression.",
       renderError: ({ detail }: { detail: string }) =>
         `The diagram could not be rendered: ${detail}`,
       layoutBadge: ({ layout }: { layout: string }) => `D2 / ${layout}`,
-      pureRenderLimitReason: ({
-        nodeCount,
-        limit,
-      }: {
-        nodeCount: string;
-        limit: string;
-      }) =>
+      pureRenderLimitReason: ({ nodeCount, limit }: { nodeCount: string; limit: string }) =>
         `The current pure EML tree has ${nodeCount} nodes, which exceeds the frontend preview threshold of ${limit}. Switch back to Standard Tree to inspect the structure.`,
-      invalidExpressionReason:
-        "Fix the expression to restore the diagram preview.",
-      previewAriaLabel: ({ mode }: { mode: string }) =>
-        `${mode} diagram preview`,
+      invalidExpressionReason: "Fix the expression to restore the diagram preview.",
+      previewAriaLabel: ({ mode }: { mode: string }) => `${mode} diagram preview`,
     },
     d2Source: {
       title: "D2 Source",

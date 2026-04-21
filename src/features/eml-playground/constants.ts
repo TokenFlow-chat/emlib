@@ -1,12 +1,5 @@
 import type { IconType } from "react-icons";
-import {
-  LuBinary,
-  LuBraces,
-  LuCalculator,
-  LuOrbit,
-  LuWaypoints,
-  LuWorkflow,
-} from "react-icons/lu";
+import { LuBinary, LuBraces, LuCalculator, LuOrbit, LuWaypoints, LuWorkflow } from "react-icons/lu";
 
 export type DiagramMode = "standard" | "pure";
 export type LayoutMode = "dagre" | "elk";

@@ -59,9 +59,7 @@ export default function HeroPanel() {
             {messages.hero.stats.map((item) => (
               <div key={item.label} className="stat-block min-w-0">
                 <div className="stat-label">{item.label}</div>
-                <div className="font-display text-2xl text-[color:var(--ink)]">
-                  {item.value}
-                </div>
+                <div className="font-display text-2xl text-[color:var(--ink)]">{item.value}</div>
                 <div className="text-sm leading-6 text-[color:var(--ink-soft)]">
                   {item.description}
                 </div>
@@ -93,13 +91,9 @@ export default function HeroPanel() {
                   <div className="flex size-8 items-center justify-center rounded-full bg-[color:var(--accent-soft)] font-semibold text-[color:var(--accent-strong)]">
                     {index + 1}
                   </div>
-                  <div className="font-semibold text-[color:var(--ink)]">
-                    {step.title}
-                  </div>
+                  <div className="font-semibold text-[color:var(--ink)]">{step.title}</div>
                 </div>
-                <p className="mt-2 text-sm leading-6 text-[color:var(--ink-soft)]">
-                  {step.text}
-                </p>
+                <p className="mt-2 text-sm leading-6 text-[color:var(--ink-soft)]">{step.text}</p>
               </div>
             ))}
           </div>

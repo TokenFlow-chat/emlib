@@ -16,10 +16,7 @@ export function HeroPanelFallback() {
           </div>
           <div className="grid gap-3 sm:grid-cols-3">
             {Array.from({ length: 3 }).map((_, index) => (
-              <div
-                key={index}
-                className="stat-block min-h-32 animate-pulse bg-white/62"
-              />
+              <div key={index} className="stat-block min-h-32 animate-pulse bg-white/62" />
             ))}
           </div>
         </div>
@@ -33,10 +30,7 @@ export function HighlightsGridFallback() {
   return (
     <section className="grid gap-4 lg:grid-cols-3">
       {Array.from({ length: 3 }).map((_, index) => (
-        <Card
-          key={index}
-          className="paper-card min-h-52 border-[color:var(--line)]"
-        />
+        <Card key={index} className="paper-card min-h-52 border-[color:var(--line)]" />
       ))}
     </section>
   );
@@ -46,10 +40,7 @@ export function SummaryPanelsFallback() {
   return (
     <section className="grid gap-4 xl:grid-cols-[minmax(0,0.5fr)_minmax(0,0.5fr)]">
       {Array.from({ length: 2 }).map((_, index) => (
-        <Card
-          key={index}
-          className="paper-card min-h-[31rem] border-[color:var(--line)]"
-        />
+        <Card key={index} className="paper-card min-h-[31rem] border-[color:var(--line)]" />
       ))}
     </section>
   );

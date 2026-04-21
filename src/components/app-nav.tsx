@@ -1,11 +1,5 @@
 import type { IconType } from "react-icons";
-import {
-  LuBookOpen,
-  LuFlaskConical,
-  LuGithub,
-  LuHouse,
-  LuLightbulb,
-} from "react-icons/lu";
+import { LuBookOpen, LuFlaskConical, LuGithub, LuHouse, LuLightbulb } from "react-icons/lu";
 
 import { LanguageToggle } from "@/components/language-toggle";
 import { useScrollSectionHash } from "@/hooks/use-scroll-section-hash";

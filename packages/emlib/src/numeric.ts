@@ -1,5 +1,5 @@
-import type { Expr } from './ast';
-import { add, constant, div, exp, exprEquals, ln, mul, neg, num, pow, sqrt, sub } from './ast';
+import type { Expr } from "./ast";
+import { add, constant, div, exp, exprEquals, ln, mul, neg, num, pow, sqrt, sub } from "./ast";
 
 export interface Rational {
   num: bigint;
@@ -7,13 +7,13 @@ export interface Rational {
 }
 
 export interface ComplexRational {
-  kind: 'complex-rational';
+  kind: "complex-rational";
   re: Rational;
   im: Rational;
 }
 
 export interface SymbolicValue {
-  kind: 'symbolic';
+  kind: "symbolic";
   expr: Expr;
 }
 
@@ -45,7 +45,7 @@ function gcd(a: bigint, b: bigint): bigint {
 
 export function rational(num: bigint, den = 1n): Rational {
   if (den === 0n) {
-    throw new Error('Division by zero in rational value');
+    throw new Error("Division by zero in rational value");
   }
   const sign = den < 0n ? -1n : 1n;
   const g = gcd(num, den);
@@ -54,25 +54,25 @@ export function rational(num: bigint, den = 1n): Rational {
 
 export function parseRationalLiteral(raw: string): Rational {
   const source = raw.trim();
-  if (source === '') return rational(0n);
+  if (source === "") return rational(0n);
 
   let sign = 1n;
   let body = source;
-  if (body.startsWith('-')) {
+  if (body.startsWith("-")) {
     sign = -1n;
     body = body.slice(1);
-  } else if (body.startsWith('+')) {
+  } else if (body.startsWith("+")) {
     body = body.slice(1);
   }
 
-  const [mantissaPart = '0', exponentPart = '0'] = body.toLowerCase().split('e');
+  const [mantissaPart = "0", exponentPart = "0"] = body.toLowerCase().split("e");
   const exponent = Number.parseInt(exponentPart, 10);
   if (!Number.isFinite(exponent)) {
     throw new Error(`Unsupported numeric literal ${raw}`);
   }
 
-  const [whole = '0', fraction = ''] = mantissaPart.split('.');
-  const digits = `${whole}${fraction}`.replace(/^0+(?=\d)/, '') || '0';
+  const [whole = "0", fraction = ""] = mantissaPart.split(".");
+  const digits = `${whole}${fraction}`.replace(/^0+(?=\d)/, "") || "0";
   let numerator = sign * BigInt(digits);
   let denominator = 1n;
   const scale = exponent - fraction.length;
@@ -107,7 +107,7 @@ export function rationalSign(a: Rational): -1 | 0 | 1 {
 }
 
 function bigintSqrtFloor(n: bigint): bigint {
-  if (n < 0n) throw new Error('Square root of negative bigint');
+  if (n < 0n) throw new Error("Square root of negative bigint");
   if (n < 2n) return n;
 
   let x = n;
@@ -130,11 +130,11 @@ function rationalSqrtExact(value: Rational): Rational | null {
 }
 
 export function exactComplex(re: Rational, im: Rational = rational(0n)): ComplexRational {
-  return { kind: 'complex-rational', re, im };
+  return { kind: "complex-rational", re, im };
 }
 
 export function isComplexRational(value: LosslessValue): value is ComplexRational {
-  return value.kind === 'complex-rational';
+  return value.kind === "complex-rational";
 }
 
 export function rationalAdd(a: Rational, b: Rational): Rational {
@@ -229,12 +229,12 @@ export function complexPowInteger(base: ComplexRational, exponent: bigint): Comp
 }
 
 export function valueToExpr(value: LosslessValue): Expr {
-  if (value.kind === 'symbolic') return value.expr;
+  if (value.kind === "symbolic") return value.expr;
   if (rationalIsZero(value.im)) return rationalToExpr(value.re);
 
   const re = rationalToExpr(value.re);
   const im = rationalToExpr(value.im);
-  const imag = mul(im, constant('i'));
+  const imag = mul(im, constant("i"));
   return rationalIsZero(value.re) ? imag : add(re, imag);
 }
 
@@ -244,22 +244,23 @@ export function rationalToExpr(value: Rational): Expr {
 }
 
 export function losslessToApprox(value: LosslessValue): ApproxComplex {
-  if (value.kind === 'symbolic') {
-    throw new Error('Cannot convert a symbolic lossless value without approximate evaluation');
+  if (value.kind === "symbolic") {
+    throw new Error("Cannot convert a symbolic lossless value without approximate evaluation");
   }
   return { re: rationalToNumber(value.re), im: rationalToNumber(value.im) };
 }
 
 function toComplexRationalInput(value: LosslessInput): ComplexRational | SymbolicValue {
-  if (typeof value === 'bigint') return exactComplex(rational(value));
-  if (typeof value === 'number') return exactComplex(parseRationalLiteral(String(value)));
-  if (typeof value === 'string') return exactComplex(parseRationalLiteral(value));
-  if ('kind' in value && (value.kind === 'complex-rational' || value.kind === 'symbolic')) return value;
-  if ('num' in value && 'den' in value) return exactComplex(value as Rational);
+  if (typeof value === "bigint") return exactComplex(rational(value));
+  if (typeof value === "number") return exactComplex(parseRationalLiteral(String(value)));
+  if (typeof value === "string") return exactComplex(parseRationalLiteral(value));
+  if ("kind" in value && (value.kind === "complex-rational" || value.kind === "symbolic"))
+    return value;
+  if ("num" in value && "den" in value) return exactComplex(value as Rational);
   const re = toComplexRationalInput(value.re);
   const im = value.im === undefined ? exactComplex(rational(0n)) : toComplexRationalInput(value.im);
-  if (re.kind === 'symbolic' || im.kind === 'symbolic') {
-    return { kind: 'symbolic', expr: add(valueToExpr(re), mul(valueToExpr(im), constant('i'))) };
+  if (re.kind === "symbolic" || im.kind === "symbolic") {
+    return { kind: "symbolic", expr: add(valueToExpr(re), mul(valueToExpr(im), constant("i"))) };
   }
   return exactComplex(re.re, im.re);
 }
@@ -270,10 +271,10 @@ function exactOrSymbolicBinary(
   exactFn: (a: ComplexRational, b: ComplexRational) => ComplexRational,
   exprFn: (a: Expr, b: Expr) => Expr,
 ): LosslessValue {
-  if (left.kind === 'complex-rational' && right.kind === 'complex-rational') {
+  if (left.kind === "complex-rational" && right.kind === "complex-rational") {
     return exactFn(left, right);
   }
-  return { kind: 'symbolic', expr: exprFn(valueToExpr(left), valueToExpr(right)) };
+  return { kind: "symbolic", expr: exprFn(valueToExpr(left), valueToExpr(right)) };
 }
 
 function exactOrSymbolicUnary(
@@ -281,30 +282,32 @@ function exactOrSymbolicUnary(
   exactFn: (a: ComplexRational) => ComplexRational,
   exprFn: (a: Expr) => Expr,
 ): LosslessValue {
-  if (value.kind === 'complex-rational') {
+  if (value.kind === "complex-rational") {
     return exactFn(value);
   }
-  return { kind: 'symbolic', expr: exprFn(valueToExpr(value)) };
+  return { kind: "symbolic", expr: exprFn(valueToExpr(value)) };
 }
 
 function isExactZeroValue(value: LosslessValue): boolean {
-  return value.kind === 'complex-rational' && complexIsZero(value);
+  return value.kind === "complex-rational" && complexIsZero(value);
 }
 
 function isExactOneValue(value: LosslessValue): boolean {
-  return value.kind === 'complex-rational' && complexIsOne(value);
+  return value.kind === "complex-rational" && complexIsOne(value);
 }
 
 function isExactNonZeroValue(value: LosslessValue): boolean {
-  return value.kind === 'complex-rational' && !complexIsZero(value);
+  return value.kind === "complex-rational" && !complexIsZero(value);
 }
 
 function exactRealPart(value: LosslessValue): Rational | null {
-  if (value.kind !== 'complex-rational' || !rationalIsZero(value.im)) return null;
+  if (value.kind !== "complex-rational" || !rationalIsZero(value.im)) return null;
   return value.re;
 }
 
-export function createLosslessEvaluator(env: Record<string, LosslessInput> = {}): (expr: Expr) => LosslessValue {
+export function createLosslessEvaluator(
+  env: Record<string, LosslessInput> = {},
+): (expr: Expr) => LosslessValue {
   const memo = new WeakMap<Expr, LosslessValue>();
 
   const evaluateNode = (node: Expr): LosslessValue => {
@@ -313,39 +316,54 @@ export function createLosslessEvaluator(env: Record<string, LosslessInput> = {})
 
     let result: LosslessValue;
     switch (node.kind) {
-      case 'num':
+      case "num":
         result = exactComplex(parseRationalLiteral(node.raw));
         break;
-      case 'var': {
+      case "var": {
         const value = env[node.name];
         if (value === undefined) throw new Error(`Missing variable ${node.name}`);
         result = toComplexRationalInput(value);
         break;
       }
-      case 'const':
-        result = node.name === 'i' ? exactComplex(rational(0n), rational(1n)) : { kind: 'symbolic', expr: node };
+      case "const":
+        result =
+          node.name === "i"
+            ? exactComplex(rational(0n), rational(1n))
+            : { kind: "symbolic", expr: node };
         break;
-      case 'neg':
+      case "neg":
         result = exactOrSymbolicUnary(evaluateNode(node.value), complexNeg, neg);
         break;
-      case 'add':
-        result = exactOrSymbolicBinary(evaluateNode(node.left), evaluateNode(node.right), complexAdd, add);
+      case "add":
+        result = exactOrSymbolicBinary(
+          evaluateNode(node.left),
+          evaluateNode(node.right),
+          complexAdd,
+          add,
+        );
         break;
-      case 'sub': {
+      case "sub": {
         const left = evaluateNode(node.left);
         const right = evaluateNode(node.right);
-        if (left.kind === 'complex-rational' && right.kind === 'complex-rational' && exprEqualsValue(left, right)) {
+        if (
+          left.kind === "complex-rational" &&
+          right.kind === "complex-rational" &&
+          exprEqualsValue(left, right)
+        ) {
           result = exactComplex(rational(0n));
         } else {
           result = exactOrSymbolicBinary(left, right, complexSub, sub);
         }
         break;
       }
-      case 'mul': {
+      case "mul": {
         const left = evaluateNode(node.left);
         const right = evaluateNode(node.right);
-        if (left.kind === 'complex-rational' && right.kind === 'complex-rational') {
-          result = (complexIsZero(left) || complexIsZero(right)) ? exactComplex(rational(0n)) : complexMul(left, right);
+        if (left.kind === "complex-rational" && right.kind === "complex-rational") {
+          result =
+            complexIsZero(left) || complexIsZero(right)
+              ? exactComplex(rational(0n))
+              : complexMul(left, right);
         } else if (isExactOneValue(left)) {
           result = right;
         } else if (isExactOneValue(right)) {
@@ -355,10 +373,10 @@ export function createLosslessEvaluator(env: Record<string, LosslessInput> = {})
         }
         break;
       }
-      case 'div': {
+      case "div": {
         const left = evaluateNode(node.left);
         const right = evaluateNode(node.right);
-        if (left.kind === 'complex-rational' && right.kind === 'complex-rational') {
+        if (left.kind === "complex-rational" && right.kind === "complex-rational") {
           if (complexIsOne(right)) {
             result = left;
           } else if (complexIsZero(left) && !complexIsZero(right)) {
@@ -375,7 +393,7 @@ export function createLosslessEvaluator(env: Record<string, LosslessInput> = {})
         }
         break;
       }
-      case 'pow': {
+      case "pow": {
         const base = evaluateNode(node.left);
         const exponent = evaluateNode(node.right);
         if (isExactOneValue(exponent)) {
@@ -386,7 +404,11 @@ export function createLosslessEvaluator(env: Record<string, LosslessInput> = {})
           result = exactComplex(rational(1n));
           break;
         }
-        if (base.kind === 'complex-rational' && exponent.kind === 'complex-rational' && rationalIsZero(exponent.im)) {
+        if (
+          base.kind === "complex-rational" &&
+          exponent.kind === "complex-rational" &&
+          rationalIsZero(exponent.im)
+        ) {
           if (rationalIsInteger(exponent.re)) {
             result = complexPowInteger(base, exponent.re.num);
             break;
@@ -399,32 +421,32 @@ export function createLosslessEvaluator(env: Record<string, LosslessInput> = {})
             }
           }
         }
-        result = { kind: 'symbolic', expr: pow(valueToExpr(base), valueToExpr(exponent)) };
+        result = { kind: "symbolic", expr: pow(valueToExpr(base), valueToExpr(exponent)) };
         break;
       }
-      case 'exp': {
+      case "exp": {
         const value = evaluateNode(node.value);
         if (isExactZeroValue(value)) {
           result = exactComplex(rational(1n));
           break;
         }
-        if (node.value.kind === 'ln') {
+        if (node.value.kind === "ln") {
           const inner = evaluateNode(node.value.value);
           if (isExactNonZeroValue(inner)) {
             result = inner;
             break;
           }
         }
-        result = { kind: 'symbolic', expr: exp(valueToExpr(value)) };
+        result = { kind: "symbolic", expr: exp(valueToExpr(value)) };
         break;
       }
-      case 'ln': {
+      case "ln": {
         const value = evaluateNode(node.value);
         if (isExactOneValue(value)) {
           result = exactComplex(rational(0n));
           break;
         }
-        if (node.value.kind === 'exp') {
+        if (node.value.kind === "exp") {
           const inner = evaluateNode(node.value.value);
           const real = exactRealPart(inner);
           if (real) {
@@ -432,55 +454,61 @@ export function createLosslessEvaluator(env: Record<string, LosslessInput> = {})
             break;
           }
         }
-        result = { kind: 'symbolic', expr: ln(valueToExpr(value)) };
+        result = { kind: "symbolic", expr: ln(valueToExpr(value)) };
         break;
       }
-      case 'sqrt': {
+      case "sqrt": {
         const value = evaluateNode(node.value);
-        if (value.kind === 'complex-rational') {
+        if (value.kind === "complex-rational") {
           const root = complexSqrtExact(value);
-          result = root ?? { kind: 'symbolic', expr: sqrt(valueToExpr(value)) };
+          result = root ?? { kind: "symbolic", expr: sqrt(valueToExpr(value)) };
         } else {
-          result = { kind: 'symbolic', expr: sqrt(value.expr) };
+          result = { kind: "symbolic", expr: sqrt(value.expr) };
         }
         break;
       }
-      case 'sin':
-      case 'tan':
-      case 'sinh':
-      case 'tanh':
-      case 'asin':
-      case 'atan':
-      case 'asinh':
-      case 'atanh': {
+      case "sin":
+      case "tan":
+      case "sinh":
+      case "tanh":
+      case "asin":
+      case "atan":
+      case "asinh":
+      case "atanh": {
         const value = evaluateNode(node.value);
-        result = isExactZeroValue(value) ? exactComplex(rational(0n)) : { kind: 'symbolic', expr: { ...node, value: valueToExpr(value) } };
+        result = isExactZeroValue(value)
+          ? exactComplex(rational(0n))
+          : { kind: "symbolic", expr: { ...node, value: valueToExpr(value) } };
         break;
       }
-      case 'cos':
-      case 'cosh': {
+      case "cos":
+      case "cosh": {
         const value = evaluateNode(node.value);
-        result = isExactZeroValue(value) ? exactComplex(rational(1n)) : { kind: 'symbolic', expr: { ...node, value: valueToExpr(value) } };
+        result = isExactZeroValue(value)
+          ? exactComplex(rational(1n))
+          : { kind: "symbolic", expr: { ...node, value: valueToExpr(value) } };
         break;
       }
-      case 'acos':
-      case 'acosh': {
+      case "acos":
+      case "acosh": {
         const value = evaluateNode(node.value);
-        result = isExactOneValue(value) ? exactComplex(rational(0n)) : { kind: 'symbolic', expr: { ...node, value: valueToExpr(value) } };
+        result = isExactOneValue(value)
+          ? exactComplex(rational(0n))
+          : { kind: "symbolic", expr: { ...node, value: valueToExpr(value) } };
         break;
       }
-      case 'eml': {
+      case "eml": {
         const left = evaluateNode(node.left);
         const right = evaluateNode(node.right);
         result = isExactOneValue(right)
           ? evaluateNode(exp(valueToExpr(left)))
-          : { kind: 'symbolic', expr: emlExpr(valueToExpr(left), valueToExpr(right)) };
+          : { kind: "symbolic", expr: emlExpr(valueToExpr(left), valueToExpr(right)) };
         break;
       }
       default: {
-        const value = 'value' in node ? evaluateNode(node.value) : null;
+        const value = "value" in node ? evaluateNode(node.value) : null;
         result = {
-          kind: 'symbolic',
+          kind: "symbolic",
           expr: value ? { ...node, value: valueToExpr(value) } : node,
         };
       }
@@ -493,17 +521,20 @@ export function createLosslessEvaluator(env: Record<string, LosslessInput> = {})
   return evaluateNode;
 }
 
-export function evaluateLossless(expr: Expr, env: Record<string, LosslessInput> = {}): LosslessValue {
+export function evaluateLossless(
+  expr: Expr,
+  env: Record<string, LosslessInput> = {},
+): LosslessValue {
   return createLosslessEvaluator(env)(expr);
 }
 
 function emlExpr(left: Expr, right: Expr): Expr {
-  return { kind: 'eml', left, right };
+  return { kind: "eml", left, right };
 }
 
 function exprEqualsValue(a: LosslessValue, b: LosslessValue): boolean {
-  if (a.kind === 'symbolic' && b.kind === 'symbolic') return exprEquals(a.expr, b.expr);
-  if (a.kind === 'complex-rational' && b.kind === 'complex-rational') {
+  if (a.kind === "symbolic" && b.kind === "symbolic") return exprEquals(a.expr, b.expr);
+  if (a.kind === "complex-rational" && b.kind === "complex-rational") {
     return rationalEquals(a.re, b.re) && rationalEquals(a.im, b.im);
   }
   return false;

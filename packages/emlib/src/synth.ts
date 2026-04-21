@@ -1,8 +1,8 @@
-import type { Expr } from './ast';
-import { eml, num, variable } from './ast';
-import { countTokens } from './analyze';
-import { evaluate } from './evaluator';
-import { toString } from './print';
+import type { Expr } from "./ast";
+import { eml, num, variable } from "./ast";
+import { countTokens } from "./analyze";
+import { evaluate } from "./evaluator";
+import { toString } from "./print";
 
 export interface SampleEnv {
   [name: string]: number;
@@ -27,7 +27,7 @@ interface Candidate extends SynthResult {
   values: number[];
 }
 
-export type CompressionLevel = 0 | 1 | 2 | 3 | 'off' | 'light' | 'medium' | 'aggressive';
+export type CompressionLevel = 0 | 1 | 2 | 3 | "off" | "light" | "medium" | "aggressive";
 
 export interface CompressionOptions extends SynthOptions {
   compression?: CompressionLevel;
@@ -59,12 +59,12 @@ function metric(a: number[], b: number[]): number {
 function fingerprint(values: number[], tol = 1e-10): string {
   return values
     .map((v) => {
-      if (Number.isNaN(v)) return 'nan';
-      if (v === Number.POSITIVE_INFINITY) return 'inf';
-      if (v === Number.NEGATIVE_INFINITY) return '-inf';
+      if (Number.isNaN(v)) return "nan";
+      if (v === Number.POSITIVE_INFINITY) return "inf";
+      if (v === Number.NEGATIVE_INFINITY) return "-inf";
       return (Math.round(v / tol) * tol).toFixed(10);
     })
-    .join('|');
+    .join("|");
 }
 
 function evalReal(expr: Expr, samples: SampleEnv[]): number[] {
@@ -88,43 +88,43 @@ function maxAbsDelta(a: number[], b: number[]): number {
 
 function collectVariables(expr: Expr, out = new Set<string>()): string[] {
   switch (expr.kind) {
-    case 'var':
+    case "var":
       out.add(expr.name);
       break;
-    case 'eml':
-    case 'add':
-    case 'sub':
-    case 'mul':
-    case 'div':
-    case 'pow':
+    case "eml":
+    case "add":
+    case "sub":
+    case "mul":
+    case "div":
+    case "pow":
       collectVariables(expr.left, out);
       collectVariables(expr.right, out);
       break;
-    case 'neg':
-    case 'exp':
-    case 'ln':
-    case 'sqrt':
-    case 'sin':
-    case 'cos':
-    case 'tan':
-    case 'cot':
-    case 'sec':
-    case 'csc':
-    case 'sinh':
-    case 'cosh':
-    case 'tanh':
-    case 'coth':
-    case 'sech':
-    case 'csch':
-    case 'asin':
-    case 'acos':
-    case 'atan':
-    case 'asec':
-    case 'acsc':
-    case 'acot':
-    case 'asinh':
-    case 'acosh':
-    case 'atanh':
+    case "neg":
+    case "exp":
+    case "ln":
+    case "sqrt":
+    case "sin":
+    case "cos":
+    case "tan":
+    case "cot":
+    case "sec":
+    case "csc":
+    case "sinh":
+    case "cosh":
+    case "tanh":
+    case "coth":
+    case "sech":
+    case "csch":
+    case "asin":
+    case "acos":
+    case "atan":
+    case "asec":
+    case "acsc":
+    case "acot":
+    case "asinh":
+    case "acosh":
+    case "atanh":
       collectVariables(expr.value, out);
       break;
     default:
@@ -133,10 +133,11 @@ function collectVariables(expr: Expr, out = new Set<string>()): string[] {
   return [...out].sort();
 }
 
-function buildDefaultSamples(variables: string[], variant: 'train' | 'validate' = 'train'): SampleEnv[] {
-  const bases = variant === 'train'
-    ? [0.45, 0.8, 1.1, 1.55, 2.2]
-    : [0.62, 0.93, 1.37, 1.88, 2.6];
+function buildDefaultSamples(
+  variables: string[],
+  variant: "train" | "validate" = "train",
+): SampleEnv[] {
+  const bases = variant === "train" ? [0.45, 0.8, 1.1, 1.55, 2.2] : [0.62, 0.93, 1.37, 1.88, 2.6];
   return bases.map((base, index) => {
     const env: SampleEnv = {};
     for (let v = 0; v < variables.length; v += 1) {
@@ -148,13 +149,28 @@ function buildDefaultSamples(variables: string[], variant: 'train' | 'validate' 
 }
 
 function normalizeCompressionLevel(level: CompressionLevel | undefined): 0 | 1 | 2 | 3 {
-  if (level === undefined || level === 'off' || level === 0) return 0;
-  if (level === 'light' || level === 1) return 1;
-  if (level === 'aggressive' || level === 3) return 3;
+  if (level === undefined || level === "off" || level === 0) return 0;
+  if (level === "light" || level === 1) return 1;
+  if (level === "aggressive" || level === 3) return 3;
   return 2;
 }
 
-function deriveCompressionSearch(expr: Expr, options: CompressionOptions): Required<Pick<CompressionOptions, 'beamWidth' | 'maxLeaves' | 'maxDelta' | 'minTokenGain' | 'variables' | 'samples' | 'validationSamples' | 'tolerance'>> | null {
+function deriveCompressionSearch(
+  expr: Expr,
+  options: CompressionOptions,
+): Required<
+  Pick<
+    CompressionOptions,
+    | "beamWidth"
+    | "maxLeaves"
+    | "maxDelta"
+    | "minTokenGain"
+    | "variables"
+    | "samples"
+    | "validationSamples"
+    | "tolerance"
+  >
+> | null {
   const level = normalizeCompressionLevel(options.compression);
   if (level === 0) return null;
 
@@ -164,8 +180,8 @@ function deriveCompressionSearch(expr: Expr, options: CompressionOptions): Requi
 
   const variables = options.variables ?? collectVariables(expr);
   if (variables.length > 2 && options.maxLeaves === undefined) return null;
-  const samples = options.samples ?? buildDefaultSamples(variables, 'train');
-  const validationSamples = options.validationSamples ?? buildDefaultSamples(variables, 'validate');
+  const samples = options.samples ?? buildDefaultSamples(variables, "train");
+  const validationSamples = options.validationSamples ?? buildDefaultSamples(variables, "validate");
 
   const maxLeavesByLevel = [0, 17, 27, 35] as const;
   const maxLeavesByLevelMulti = [0, 15, 21, 25] as const;
@@ -177,7 +193,12 @@ function deriveCompressionSearch(expr: Expr, options: CompressionOptions): Requi
 
   return {
     beamWidth: options.beamWidth ?? (multivariate ? beamByLevelMulti[level] : beamByLevel[level]),
-    maxLeaves: options.maxLeaves ?? Math.min(tokenBudget - 2, multivariate ? maxLeavesByLevelMulti[level] : maxLeavesByLevel[level]),
+    maxLeaves:
+      options.maxLeaves ??
+      Math.min(
+        tokenBudget - 2,
+        multivariate ? maxLeavesByLevelMulti[level] : maxLeavesByLevel[level],
+      ),
     maxDelta: options.maxDelta ?? deltaByLevel[level],
     minTokenGain: options.minTokenGain ?? gainByLevel[level],
     variables,
@@ -188,21 +209,25 @@ function deriveCompressionSearch(expr: Expr, options: CompressionOptions): Requi
 }
 
 function compareCandidates(a: Candidate, b: Candidate): number {
-  return a.distance - b.distance || a.leaves - b.leaves || toString(a.expr).localeCompare(toString(b.expr));
+  return (
+    a.distance - b.distance ||
+    a.leaves - b.leaves ||
+    toString(a.expr).localeCompare(toString(b.expr))
+  );
 }
 
 function isBetterRepresentative(candidate: Candidate, previous: Candidate): boolean {
-  return candidate.leaves < previous.leaves
-    || (candidate.leaves === previous.leaves && candidate.distance < previous.distance)
-    || (
-      candidate.leaves === previous.leaves
-      && candidate.distance === previous.distance
-      && toString(candidate.expr) < toString(previous.expr)
-    );
+  return (
+    candidate.leaves < previous.leaves ||
+    (candidate.leaves === previous.leaves && candidate.distance < previous.distance) ||
+    (candidate.leaves === previous.leaves &&
+      candidate.distance === previous.distance &&
+      toString(candidate.expr) < toString(previous.expr))
+  );
 }
 
 function combineEmlValues(left: number[], right: number[]): number[] {
-  const out = new Array<number>(left.length);
+  const out = Array.from<number>({ length: left.length });
   for (let i = 0; i < left.length; i += 1) {
     const a = left[i] ?? NaN;
     const b = right[i] ?? NaN;
@@ -231,7 +256,8 @@ function keepLevelFrontier(pool: Candidate[], beamWidth: number): Candidate[] {
 
   for (const candidate of byQuality.slice(0, beamWidth)) add(candidate);
   for (const candidate of bySize.slice(0, Math.max(8, Math.floor(beamWidth / 2)))) add(candidate);
-  for (const candidate of withInfinities.slice(0, Math.max(4, Math.floor(beamWidth / 4)))) add(candidate);
+  for (const candidate of withInfinities.slice(0, Math.max(4, Math.floor(beamWidth / 4))))
+    add(candidate);
 
   return [...keep.values()].sort(compareCandidates);
 }
@@ -239,7 +265,7 @@ function keepLevelFrontier(pool: Candidate[], beamWidth: number): Candidate[] {
 export function synthesizePureEml(target: Expr, options: SynthOptions = {}): SynthResult | null {
   const maxLeaves = options.maxLeaves ?? 9;
   const beamWidth = options.beamWidth ?? 256;
-  const variables = options.variables ?? ['x'];
+  const variables = options.variables ?? ["x"];
   const samples = options.samples ?? [
     { x: 0.5, y: 1.2 },
     { x: 0.8, y: 1.5 },
@@ -251,20 +277,35 @@ export function synthesizePureEml(target: Expr, options: SynthOptions = {}): Syn
   const targetValues = evalReal(target, samples);
   const levels = new Map<number, Candidate[]>();
   const semanticFrontier = new Map<string, Candidate>();
-  const seed = keepLevelFrontier([
-    {
-      expr: num(1),
-      values: samples.map(() => 1),
-      distance: metric(samples.map(() => 1), targetValues),
-      delta: maxAbsDelta(samples.map(() => 1), targetValues),
-      leaves: 1,
-    },
-    ...variables.map((name) => {
-      const expr = variable(name);
-      const values = samples.map((s) => s[name] ?? NaN);
-      return { expr, values, distance: metric(values, targetValues), delta: maxAbsDelta(values, targetValues), leaves: 1 };
-    }),
-  ], beamWidth);
+  const seed = keepLevelFrontier(
+    [
+      {
+        expr: num(1),
+        values: samples.map(() => 1),
+        distance: metric(
+          samples.map(() => 1),
+          targetValues,
+        ),
+        delta: maxAbsDelta(
+          samples.map(() => 1),
+          targetValues,
+        ),
+        leaves: 1,
+      },
+      ...variables.map((name) => {
+        const expr = variable(name);
+        const values = samples.map((s) => s[name] ?? NaN);
+        return {
+          expr,
+          values,
+          distance: metric(values, targetValues),
+          delta: maxAbsDelta(values, targetValues),
+          leaves: 1,
+        };
+      }),
+    ],
+    beamWidth,
+  );
   for (const candidate of seed) {
     semanticFrontier.set(fingerprint(candidate.values), candidate);
   }
@@ -313,7 +354,10 @@ export function synthesizePureEml(target: Expr, options: SynthOptions = {}): Syn
   return best;
 }
 
-export function compressPureEml(target: Expr, options: CompressionOptions = {}): SynthResult | null {
+export function compressPureEml(
+  target: Expr,
+  options: CompressionOptions = {},
+): SynthResult | null {
   const search = deriveCompressionSearch(target, options);
   if (!search) return null;
 

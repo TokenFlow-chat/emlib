@@ -1,19 +1,7 @@
-import {
-  createContext,
-  type ReactNode,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import { createContext, type ReactNode, useContext, useEffect, useMemo, useState } from "react";
 
 import { zhCN } from "@/i18n/locales/zh-CN";
-import {
-  baseMessages,
-  LOCALES,
-  type Locale,
-  type MessageDictionary,
-} from "@/i18n/schema";
+import { baseMessages, LOCALES, type Locale, type MessageDictionary } from "@/i18n/schema";
 
 const STORAGE_KEY = "eml.locale";
 const DEFAULT_LOCALE: Locale = "zh-CN";
@@ -49,10 +37,7 @@ function detectInitialLocale(): Locale {
     // Ignore storage access issues and fall back to browser preferences.
   }
 
-  const browserLocale = [
-    ...(window.navigator.languages ?? []),
-    window.navigator.language,
-  ]
+  const browserLocale = [...(window.navigator.languages ?? []), window.navigator.language]
     .map(resolveLocale)
     .find((locale): locale is Locale => locale !== null);
 
@@ -83,18 +68,13 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     document.documentElement.lang = locale;
     document.title = messages.app.title;
 
-    const descriptionTag = document.querySelector<HTMLMetaElement>(
-      'meta[name="description"]',
-    );
+    const descriptionTag = document.querySelector<HTMLMetaElement>('meta[name="description"]');
     if (descriptionTag) {
       descriptionTag.content = messages.app.metaDescription;
     }
   }, [locale, messages]);
 
-  const numberFormatter = useMemo(
-    () => new Intl.NumberFormat(locale),
-    [locale],
-  );
+  const numberFormatter = useMemo(() => new Intl.NumberFormat(locale), [locale]);
 
   const value = useMemo<I18nContextValue>(
     () => ({
@@ -107,11 +87,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     [locale, messages, numberFormatter],
   );
 
-  return (
-    <I18nContext.Provider value={value}>
-      {children}
-    </I18nContext.Provider>
-  );
+  return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;
 }
 
 export function useI18n() {

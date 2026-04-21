@@ -1,23 +1,10 @@
 import type { IconType } from "react-icons";
 
 import { paperHighlights } from "@/features/eml-playground/constants";
-import {
-  Card,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useI18n } from "@/i18n";
 
-function SectionCard({
-  icon: Icon,
-  title,
-  text,
-}: {
-  icon: IconType;
-  title: string;
-  text: string;
-}) {
+function SectionCard({ icon: Icon, title, text }: { icon: IconType; title: string; text: string }) {
   return (
     <Card className="paper-card border-[color:var(--line)]">
       <CardHeader className="gap-4">
@@ -25,9 +12,7 @@ function SectionCard({
           <div className="flex size-11 items-center justify-center rounded-2xl border border-[color:var(--line)] bg-[color:var(--accent-soft)] text-[color:var(--accent-strong)]">
             <Icon className="size-5" />
           </div>
-          <CardTitle className="font-display text-2xl text-[color:var(--ink)]">
-            {title}
-          </CardTitle>
+          <CardTitle className="font-display text-2xl text-[color:var(--ink)]">{title}</CardTitle>
         </div>
         <div className="space-y-2">
           <CardDescription className="leading-6 text-[color:var(--ink-soft)]">

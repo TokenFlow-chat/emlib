@@ -8,10 +8,7 @@ import {
   type DiagramMode,
   type LayoutMode,
 } from "@/features/eml-playground/constants";
-import {
-  useD2Preview,
-  usePreviewActivation,
-} from "@/features/eml-playground/use-d2-preview";
+import { useD2Preview, usePreviewActivation } from "@/features/eml-playground/use-d2-preview";
 import { useExpressionAnalysis } from "@/features/eml-playground/use-expression-analysis";
 import {
   defaultValueForVariable,
@@ -20,13 +17,7 @@ import {
   withTransparentD2Background,
 } from "@/features/eml-playground/utils";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -62,17 +53,13 @@ function MetricCard({
           <div className="text-3xl font-semibold text-[color:var(--ink)]">
             {formatNumber(tokenCount)}
           </div>
-          <div className="text-sm text-[color:var(--ink-soft)]">
-            {tokenNodeLabel}
-          </div>
+          <div className="text-sm text-[color:var(--ink-soft)]">{tokenNodeLabel}</div>
         </div>
         <div>
           <div className="text-3xl font-semibold text-[color:var(--ink)]">
             {formatNumber(typeCount)}
           </div>
-          <div className="text-sm text-[color:var(--ink-soft)]">
-            {operatorTypeLabel}
-          </div>
+          <div className="text-sm text-[color:var(--ink-soft)]">{operatorTypeLabel}</div>
         </div>
       </div>
     </div>
@@ -88,9 +75,7 @@ export function PlaygroundStudio() {
     x: "0.5",
     y: "2",
   });
-  const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">(
-    "idle",
-  );
+  const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">("idle");
 
   const analysisState = useExpressionAnalysis(expression, envValues);
   const previewActivation = usePreviewActivation<HTMLDivElement>();
@@ -128,20 +113,12 @@ export function PlaygroundStudio() {
       };
     }
 
-    const activeExpr =
-      diagramMode === "pure"
-        ? analysisState.pureExpr
-        : analysisState.standardExpr;
+    const activeExpr = diagramMode === "pure" ? analysisState.pureExpr : analysisState.standardExpr;
     const activeMetrics =
-      diagramMode === "pure"
-        ? analysisState.pureMetrics
-        : analysisState.standardMetrics;
+      diagramMode === "pure" ? analysisState.pureMetrics : analysisState.standardMetrics;
     const d2Source = withTransparentD2Background(exprToD2(activeExpr));
 
-    if (
-      diagramMode === "pure" &&
-      activeMetrics.tokenCount > PURE_RENDER_LIMIT
-    ) {
+    if (diagramMode === "pure" && activeMetrics.tokenCount > PURE_RENDER_LIMIT) {
       return {
         canRender: false,
         reason: messages.playground.diagram.pureRenderLimitReason({
@@ -223,10 +200,7 @@ export function PlaygroundStudio() {
             </div>
 
             <div className="mt-5 space-y-2">
-              <Label
-                htmlFor="expression-input"
-                className="text-[color:var(--ink)]"
-              >
+              <Label htmlFor="expression-input" className="text-[color:var(--ink)]">
                 {messages.playground.expression.label}
               </Label>
               <Textarea
@@ -301,10 +275,7 @@ export function PlaygroundStudio() {
               {analysisState.ok && analysisState.variables.length > 0 ? (
                 analysisState.variables.map((name) => (
                   <div key={name} className="min-w-0 space-y-2">
-                    <Label
-                      htmlFor={`var-${name}`}
-                      className="text-[color:var(--ink)]"
-                    >
+                    <Label htmlFor={`var-${name}`} className="text-[color:var(--ink)]">
                       {name}
                     </Label>
                     <Input
@@ -336,9 +307,7 @@ export function PlaygroundStudio() {
                   tokenCount={analysisState.standardMetrics.tokenCount}
                   typeCount={analysisState.standardMetrics.typeCount}
                   tokenNodeLabel={messages.playground.metrics.tokenNodeLabel}
-                  operatorTypeLabel={
-                    messages.playground.metrics.operatorTypeLabel
-                  }
+                  operatorTypeLabel={messages.playground.metrics.operatorTypeLabel}
                   formatNumber={formatNumber}
                 />
                 <MetricCard
@@ -346,9 +315,7 @@ export function PlaygroundStudio() {
                   tokenCount={analysisState.pureMetrics.tokenCount}
                   typeCount={analysisState.pureMetrics.typeCount}
                   tokenNodeLabel={messages.playground.metrics.tokenNodeLabel}
-                  operatorTypeLabel={
-                    messages.playground.metrics.operatorTypeLabel
-                  }
+                  operatorTypeLabel={messages.playground.metrics.operatorTypeLabel}
                   formatNumber={formatNumber}
                 />
               </div>
@@ -421,10 +388,7 @@ export function PlaygroundStudio() {
           )}
         </div>
 
-        <div
-          ref={previewActivation.ref}
-          className="min-w-0 space-y-3.5 xl:sticky xl:top-6"
-        >
+        <div ref={previewActivation.ref} className="min-w-0 space-y-3.5 xl:sticky xl:top-6">
           <div className="diagram-shell">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[color:var(--line)] px-5 py-4">
               <div className="mt-1 font-display text-2xl text-[color:var(--ink)]">
@@ -459,17 +423,18 @@ export function PlaygroundStudio() {
                 <div className="rounded-[0.9rem] border border-[color:var(--line)] bg-white/72 px-5 py-6 text-sm text-[color:var(--ink-soft)]">
                   {messages.playground.diagram.loading}
                 </div>
-              ) : d2Preview.svgMarkup ? (
+              ) : d2Preview.svgUrl ? (
                 <div className="d2-viewport rounded-[0.9rem] border border-[color:var(--line)]">
-                  <div
-                    aria-label={messages.playground.diagram.previewAriaLabel({
+                  <img
+                    src={d2Preview.svgUrl}
+                    alt={messages.playground.diagram.previewAriaLabel({
                       mode:
                         diagramMode === "pure"
                           ? messages.playground.diagram.titles.pure
                           : messages.playground.diagram.titles.standard,
                     })}
-                    className="d2-inline-svg"
-                    dangerouslySetInnerHTML={{ __html: d2Preview.svgMarkup }}
+                    className="d2-preview-image"
+                    onError={d2Preview.handleImageError}
                   />
                 </div>
               ) : (

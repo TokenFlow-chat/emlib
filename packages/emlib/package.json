@@ -16,7 +16,7 @@
     "test": "bun test"
   },
   "devDependencies": {
-    "@typescript/native-preview": "7.0.0-dev.20260420.1",
-    "@types/bun": "latest"
+    "@types/bun": "latest",
+    "@typescript/native-preview": "7.0.0-dev.20260420.1"
   }
 }

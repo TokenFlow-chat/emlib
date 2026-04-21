@@ -1,9 +1,6 @@
 import type { Expr } from "emlib";
 
-export function collectVariables(
-  expr: Expr,
-  out = new Set<string>(),
-): string[] {
+export function collectVariables(expr: Expr, out = new Set<string>()): string[] {
   switch (expr.kind) {
     case "var":
       out.add(expr.name);
@@ -58,10 +55,7 @@ export function defaultValueForVariable(name: string): string {
   return "1";
 }
 
-export function parseEnvValue(
-  raw: string | undefined,
-  fallback: string,
-): number {
+export function parseEnvValue(raw: string | undefined, fallback: string): number {
   const parsed = Number(raw ?? fallback);
   return Number.isFinite(parsed) ? parsed : Number(fallback);
 }
@@ -89,10 +83,7 @@ export function formatComplex(value: { re: number; im: number }): string {
   return `${formatScalar(re)} ${sign} ${imag}`;
 }
 
-export function metricDelta(
-  a: { re: number; im: number },
-  b: { re: number; im: number },
-): number {
+export function metricDelta(a: { re: number; im: number }, b: { re: number; im: number }): number {
   return Math.hypot(a.re - b.re, a.im - b.im);
 }
 
@@ -115,6 +106,41 @@ classes: {
 }
 
 ${source}`;
+}
+
+function isSafeLocalReference(value: string): boolean {
+  const normalized = value.trim();
+  return normalized === "" || normalized.startsWith("#");
+}
+
+function sanitizeSvgDocument(svg: SVGSVGElement): SVGSVGElement {
+  svg
+    .querySelectorAll("script, foreignObject, iframe, object, embed, audio, video")
+    .forEach((node) => {
+      node.remove();
+    });
+
+  svg.querySelectorAll("*").forEach((node) => {
+    for (const attribute of Array.from(node.attributes)) {
+      const name = attribute.name.toLowerCase();
+      const value = attribute.value;
+
+      if (name.startsWith("on")) {
+        node.removeAttribute(attribute.name);
+        continue;
+      }
+
+      if ((name === "href" || name === "xlink:href") && !isSafeLocalReference(value)) {
+        node.removeAttribute(attribute.name);
+      }
+    }
+  });
+
+  return svg;
+}
+
+export function buildSvgDataUrl(svg: string): string {
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 }
 
 export function normalizeRenderedSvg(output: unknown): string | null {
@@ -140,9 +166,10 @@ export function normalizeRenderedSvg(output: unknown): string | null {
   const svg = parsed.documentElement;
   if (!svg || svg.tagName.toLowerCase() !== "svg") return null;
 
-  svg.setAttribute("width", "100%");
-  svg.setAttribute("height", "100%");
-  svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+  const safeSvg = sanitizeSvgDocument(svg as unknown as SVGSVGElement);
+  safeSvg.setAttribute("width", "100%");
+  safeSvg.setAttribute("height", "100%");
+  safeSvg.setAttribute("preserveAspectRatio", "xMidYMid meet");
 
-  return svg.outerHTML;
+  return safeSvg.outerHTML;
 }
