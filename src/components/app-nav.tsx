@@ -2,6 +2,7 @@ import type { IconType } from "react-icons";
 import { LuBookOpen, LuFlaskConical, LuGithub, LuHouse, LuLightbulb } from "react-icons/lu";
 
 import { LanguageToggle } from "@/components/language-toggle";
+import { useAutoHideNav } from "@/hooks/use-auto-hide-nav";
 import { useScrollSectionHash } from "@/hooks/use-scroll-section-hash";
 import { useI18n } from "@/i18n";
 import logoUrl from "@/logo.svg";
@@ -38,9 +39,12 @@ const externalItems = [
 export function AppNav() {
   const { messages } = useI18n();
   const { activeId } = useScrollSectionHash(navItems.map((item) => item.id));
+  const { isVisible } = useAutoHideNav();
 
   return (
-    <header className="sticky top-0 z-50 px-3 pt-3 sm:px-4 sm:pt-4 lg:px-6 lg:pt-5">
+    <header
+      className={`app-nav-frame sticky top-0 z-50 px-3 pt-3 sm:px-4 sm:pt-4 lg:px-6 lg:pt-5 ${isVisible ? "app-nav-frame-visible" : "app-nav-frame-hidden"}`}
+    >
       <div className="app-nav-shell mx-auto max-w-370">
         <div className="app-nav flex flex-col gap-3 px-3 py-3 sm:px-4 lg:flex-row lg:items-center lg:justify-between">
           <a
