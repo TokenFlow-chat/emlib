@@ -1,6 +1,6 @@
 import type { Expr } from "./ast";
 import { eml, num, variable } from "./ast";
-import { countTokens } from "./analyze";
+import { countTokens, collectVariables } from "./analyze";
 import { evaluate } from "./evaluator";
 import { toString } from "./print";
 
@@ -84,53 +84,6 @@ function maxAbsDelta(a: number[], b: number[]): number {
     best = Math.max(best, Math.abs(av - bv));
   }
   return best;
-}
-
-function collectVariables(expr: Expr, out = new Set<string>()): string[] {
-  switch (expr.kind) {
-    case "var":
-      out.add(expr.name);
-      break;
-    case "eml":
-    case "add":
-    case "sub":
-    case "mul":
-    case "div":
-    case "pow":
-      collectVariables(expr.left, out);
-      collectVariables(expr.right, out);
-      break;
-    case "neg":
-    case "exp":
-    case "ln":
-    case "sqrt":
-    case "sin":
-    case "cos":
-    case "tan":
-    case "cot":
-    case "sec":
-    case "csc":
-    case "sinh":
-    case "cosh":
-    case "tanh":
-    case "coth":
-    case "sech":
-    case "csch":
-    case "asin":
-    case "acos":
-    case "atan":
-    case "asec":
-    case "acsc":
-    case "acot":
-    case "asinh":
-    case "acosh":
-    case "atanh":
-      collectVariables(expr.value, out);
-      break;
-    default:
-      break;
-  }
-  return [...out].sort();
 }
 
 function buildDefaultSamples(

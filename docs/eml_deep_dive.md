@@ -1,344 +1,313 @@
-# 深入理解《All elementary functions from a single operator》
+# EML Deep Dive: One Operator to Rule Them All
 
-> 论文：Andrzej Odrzywolek, **All elementary functions from a single operator**
->
-> 核心对象：
->
-> $$
-> \mathrm{eml}(x,y)=\exp(x)-\ln(y)
-> $$
->
-> 以及唯一常量 \(1\)。
+> TL;DR: Some mathematician proved that `exp(x) - ln(y)` plus the constant `1` is enough to build every button on your TI-84. This doc explains why that matters, how the discovery actually happened (spoiler: brute force), and what it looks like when you turn it into working TypeScript.
 
 ---
 
-## 1. 这篇论文到底在说什么
+## 1. The Punchline
 
-这篇论文的主张可以压缩成一句话：
+You know NAND, right? One gate. Feed it into itself enough times and you get AND, OR, NOT, XOR, adders, CPUs, the whole stack.
 
-**如果允许复数中间过程，那么一个二元算子 `eml(x,y)=exp(x)-ln(y)` 加上常量 `1`，就足以生成“科学计算器”里常见的初等函数与运算。**
+Andrzej Odrzywolek asked: _does continuous mathematics have a NAND?_
 
-作者把这个现象类比为布尔逻辑中的 NAND。NAND 是逻辑世界的单一完备原语；论文想做的事情，是在连续数学里寻找类似的“谢弗原语（Sheffer operator）”。论文声称，`eml` 就是这样一个候选者。论文摘要、总结段和意义说明都反复强调这一点：不仅 `exp`、`ln` 能直接得到，连 `+,-,*,/,x^y` 以及许多三角/双曲函数、常数 `e, π, i` 也都能从 `eml` 和 `1` 构造出来。（论文第 1–3 页）
+Turns out, yes. It's this weird little binary operator:
 
-作者给出的最简单两个例子是：
-
-> $$
-> \exp(x)=\mathrm{eml}(x,1)
-> $$
->
-> $$
-> \ln(x)=\mathrm{eml}\bigl(1,\mathrm{eml}(\mathrm{eml}(1,x),1)\bigr)
-> $$
-
-这已经足够让人意识到：`eml` 不是“把 exp 和 ln 拼一起”的无聊包装，而是带有某种**可编译性**。换句话说，它像一个统一的指令集，而不是一条孤立公式。
-
----
-
-## 2. 为什么这个结果有意思
-
-### 2.1 从“很多按钮”到“一个按钮”
-
-我们日常对初等函数的理解是“按钮列表式”的：`+ - * / sqrt exp ln sin cos tan ...`。但论文指出，这些按钮高度冗余。历史上我们已经知道很多约化：
-
-- 乘法可由对数和指数表达；
-- 三角函数可借助 Euler 公式和复指数表达；
-- 根式可视为幂；
-- 双曲函数与三角函数也互相连通。
-
-但过去通常只会把功能压缩到一个**小集合**，并没有真正把它压缩到一个**单一二元运算**。这正是论文的主要新意：它不是说“所有函数都能由 exp/ln 表达”，而是说“连 exp/ln 自己也能被嵌入到一个统一二元原语里”。（论文第 2、5、8–10 页）
-
-### 2.2 统一表示 = 统一搜索空间
-
-论文真正有后劲的地方，不只是“存在性”，而是表示论上的收益：
-
-如果所有表达式都能写成
-
-```text
-S -> 1 | eml(S, S)
+```
+eml(x, y) = exp(x) - ln(y)
 ```
 
-那么任何表达式都变成**同构的满二叉树**。这意味着：
+With nothing but `1` and repeated applications of `eml`, you can recover:
 
-- 表达式语法极度简单；
-- 搜索空间规整；
-- 可以把符号回归问题重写成“在固定树结构上训练参数”的问题；
-- 甚至可以把它看成一种统一电路元件组成的模拟/符号混合电路。
+- `+ - * / ^`
+- `exp`, `ln`, `sqrt`
+- `sin`, `cos`, `tan`, and their inverses
+- `sinh`, `cosh`, `tanh`, and their inverses
+- Constants: `e`, `π`, `i`, integers, rationals
 
-这是论文在方法论上最值得重视的地方。作者不仅给出“函数可表示”，还强调这种表示会让**符号回归、模拟电路、单指令机器、FPGA/类模拟硬件**都获得统一视角。（论文第 2、10–15 页）
+Every expression collapses to a single grammar:
 
----
-
-## 3. 我建议怎样读这篇论文
-
-最好的阅读顺序不是按页从头到尾，而是下面这条线：
-
-### 第一步：先抓结论，不要一开始陷进证明细节
-
-先读第 1–3 页：摘要、summary paragraph、significance statement。
-
-你要先建立对问题的“结构感”：
-
-- 作者要找的是连续数学中的“NAND”；
-- `eml` 是通过系统搜索得到，而不是凭灵感手写出来；
-- 重点不是单个漂亮公式，而是**整套科学计算器基底都可被恢复**。
-
-### 第二步：盯住表 2，而不是先盯推导树
-
-表 2 给出了作者找到的“降维路线”：从 36 个按钮逐步减少到 3 个原语，最后到 `EML + 1`。这是全文最重要的结构地图之一。
-
-这张表传递了一个非常关键的思想：
-
-> `eml` 的发现不是突然天降，而是“最小化基底搜索”的终点。
-
-也就是说，这不是单个技巧，而是一个系统工程结果。（论文第 8–10 页）
-
-### 第三步：再回头读方法部分
-
-方法部分有两个核心点：
-
-1. **ablation / base-set reduction**：不断从原始 primitive 列表里删元素，测试剩余集合还能否重建全部功能；
-2. **数值 bootstrap + inverse symbolic calculator**：不直接做完全符号爆搜，而是先用数值点做筛选，再独立验证。
-
-作者明确说：
-
-- 直接符号穷举太难；
-- 实际搜索是启发式的、数值引导的；
-- 严格验证被放到补充材料里。
-
-这意味着你在评价论文时，不能把它当成一篇“纯抽象证明论文”；更像是一篇**计算发现 + 构造性验证**论文。（论文第 6–8、10 页）
-
-### 第四步：最后再看图 1 和图 2
-
-- 图 1 是“从 EML 出发生长出整个函数族”的系统树；
-- 图 2 是小例子，展示 `ln x`、`x`、`-x`、`1/x`、`xy` 等都可以写成纯 EML 二叉树。（论文第 22–23 页）
-
-图 2 的意义不是“好看”，而是告诉你：
-
-> **表达式树的类型统一以后，编译、搜索、硬件映射都自然了。**
-
----
-
-## 4. 论文的真正贡献，不止一个
-
-我把贡献拆成四层。
-
-### 4.1 存在性贡献
-
-作者展示了一个具体的单二元算子 `eml`，配合常量 `1`，足以生成表 1 中的“科学计算器式”初等函数基底。（论文第 5、8–10 页）
-
-### 4.2 表示论贡献
-
-所有表达式都可规约为统一语法
-
-```text
-S -> 1 | eml(S, S)
+```
+S → 1 | eml(S, S)
 ```
 
-这把 heterogeneous grammar 变成 homogeneous grammar。对符号处理来说，这几乎是质变。
-
-### 4.3 搜索/回归贡献
-
-作者提出：既然语法是统一的，那么可以用固定深度的 EML 树当成“主公式（master formula）”，再通过优化参数来逼近甚至恢复精确闭式表达。作者给了 `ln x` 的成功例子，也做了 PyTorch 训练实验。（论文第 12–15 页）
-
-### 4.4 工程视角贡献
-
-作者不把结果停留在“数学上存在”，还讨论了：
-
-- EML 编译器；
-- 单指令栈机；
-- FPGA / 模拟电路；
-- 作为符号回归统一架构的可能性。
-
-这使论文更接近“新表示 + 新计算模型”的提案，而不是一条孤立恒等式集合。（论文第 10–15 页）
+That's it. No `sin` node. No `mul` node. Just identical `eml` nodes stacked into a binary tree. Like a circuit built from nothing but NAND gates.
 
 ---
 
-## 5. 这篇论文最容易被误读的地方
+## 2. Why This Isn't Obvious
 
-### 5.1 它不是说“EML 比普通表达式更短”
+People have known forever that `exp` and `ln` are powerful. Euler figured out that `e^(iθ) = cos θ + i sin θ` in 1748. Liouville and Ritt built entire theories of integration around the exp-log class.
 
-恰恰相反，表 4 说明很多函数的 EML 表达会非常长。比如 `ln x` 还算短，但 `sqrt x`、`π`、`i`、乘法、除法等的纯 EML 复杂度明显更高。（论文第 13 页）
+But here's the thing: **reducing a set to two primitives is not the same as reducing to one.**
 
-所以 EML 的价值不是“人类书写更简洁”，而是：
+We knew `+` and `×` could be expressed through `exp/ln`:
 
-- 原语统一；
-- 结构统一；
-- 搜索空间统一；
-- 编译目标统一。
+```
+x × y = e^(ln x + ln y)
+x + y = ln(e^x × e^y)
+```
 
-### 5.2 它不是纯实数内闭的故事
+We knew trig functions could be expressed through complex exponentials. But nobody had compressed the _entire_ scientific calculator down to a **single binary operator** plus a constant.
 
-论文明确指出：为了得到 `i`、`π` 以及三角函数，内部需要复数域和复对数主支。作者甚至专门讨论了 branch choice、`ln 0 = -∞`、IEEE754、NumPy/PyTorch 与部分系统实现差异的问题。（论文第 5、10–11、15–16 页）
+The paper's real contribution isn't any one identity. It's that the _endpoint_ of reduction actually exists. The operator `eml` was found by exhaustive search, not derived from theory. The author started with 36 primitives (Table 1), peeled them off one by one, and kept checking if the remainder could still reconstruct the full set. When the set stalled at `{1, eml}`, he knew he'd hit the floor.
 
-所以如果有人把它理解成“在实数域里无痛完成一切”，那是不对的。
-
-### 5.3 它的搜索发现不是最终证明本身
-
-主文中作者多次强调搜索是 heuristic sieve，真正的独立验证放在 SI 里。也就是说，**发现过程**和**证明/验证过程**在论文里是区分开的。（论文第 7、10 页）
+This is not a proof paper. It's a **computational discovery** paper with constructive verification.
 
 ---
 
-## 6. 我对这篇论文的技术解读
+## 3. How the Search Actually Worked
 
-### 6.1 `eml` 为什么可能足够强
+The author didn't sit down with a pen and derive `eml`. He wrote a search engine.
 
-`eml(x,y)=exp(x)-ln(y)` 同时包含三种关键张力：
+### The Ablation Game
 
-1. **增长端**：`exp(x)` 提供极强非线性；
-2. **逆向端**：`ln(y)` 提供“解码 / 反演”能力；
-3. **非交换输出**：减法让左右输入角色不对称。
+Start with 36 buttons. Remove one. Can the remaining 35 still express everything? If yes, the removed button was redundant. Repeat.
 
-表 2 之前的简化链已经暗示：最小系统往往需要
+This produced a countdown (Table 2):
 
-- 某种互逆对；
-- 某种非交换性。
+| System  | Primitives                 | Count |
+| ------- | -------------------------- | ----- |
+| Base-36 | Full calculator            | 36    |
+| Wolfram | `π,e,i`, `ln`, `+,×,^`     | 7     |
+| Calc 3  | `exp,ln,-x,1/x,+`          | 6     |
+| Calc 2  | `exp,ln,-`                 | 4     |
+| Calc 1  | `e` or `π`, `x^y, log_x y` | 4     |
+| Calc 0  | `exp`, `log_x y`           | 3     |
+| **EML** | **`1`, `eml(x,y)`**        | **3** |
 
-`eml` 恰好把这两者熔在了一起，所以不是任意拼接都行，而是结构上刚好踩中作者搜索经验里的“有效模板”。（论文第 8–10 页）
+The crucial pattern: every minimal system contains **a pair of inverse functions** and **a non-commutative operation**.
 
-### 6.2 它为何像“连续 NAND”
+- `exp`/`ln` are inverses. Subtraction is non-commutative.
+- `eml` fuses both properties into one node.
 
-类比 NAND 的关键，不是形式相似，而是**统一构造能力**：
+### The Numerical Bootstrap Trick
 
-- NAND 可以构造所有布尔连接词；
-- EML 可以构造作者所定义的科学计算器初等函数基底。
+Direct symbolic verification is intractable (Kolmogorov complexity ~7-9 for typical formulas). So the author cheated, brilliantly:
 
-更深一点说，两者都把“多种看似不同的运算”压缩成**单一种结构节点反复复制**。这就是为什么论文不断谈电路、语法树和单指令机器。
+1. Pick algebraically independent transcendental constants, e.g. `γ` (Euler-Mascheroni) and `A` (Glaisher-Kinkelin).
+2. Evaluate the target numerically at these points.
+3. Enumerate all candidate EML expressions up to some depth.
+4. If a candidate matches numerically, run an inverse symbolic calculator on it.
+5. Independently verify the candidate later (symbolic + cross-platform numerical checks).
 
-### 6.3 这对符号回归为什么重要
+Under Schanuel's conjecture, coincidental equality between such expressions is essentially impossible. So the numerical sieve is reliable.
 
-现代符号回归最大的难点之一，是 grammar 太杂：
-
-- 该不该放 `sin`？
-- 要不要 `exp`？
-- `pow` 和 `sqrt` 是否都保留？
-- 运算集合不全时，是否会漏掉真实规律？
-
-EML 提供了一个“理论上完备”的统一搜索空间。即便实际训练仍然很难，它至少解决了**表达空间先天不全**的问题。作者在深度 2 可 100% 恢复、深度 3–4 约 25%、深度 5 以下显著下降，这说明表示是通的，但优化景观并不简单。（论文第 14–15 页）
-
----
-
-## 7. 论文的局限与开放问题
-
-### 7.1 主文没有把全部显式公式都铺开
-
-作者给出了一部分关键公式、表格与图示，但很多构造链和独立验证在 SI 中。仅靠主文，你可以理解框架，但很难把整个“函数库”手工复现完整。
-
-### 7.2 分支与边界是现实问题
-
-- 复对数主支；
-- 负实轴跳变；
-- `ln 0` 的扩展实数处理；
-- 浮点系统是否允许 `inf` / `nan` 流过。
-
-这些都不是装饰性细节，而是工程落地时必须直面的事。（论文第 10–11、15–16 页）
-
-### 7.3 “无常量的二元 Sheffer” 仍然开放
-
-作者明确说 EML 仍然依赖一个 distinguished constant（`1`、`e` 或 `-∞` 等）。是否存在**不需要固定终端常量**的连续二元 Sheffer，还是开放问题。作者还提到一个三元候选算子，但未完成分析。（论文第 15–16 页）
-
-### 7.4 单变量版本也仍然开放
-
-是否存在既像激活函数，又能单独生成全部初等函数的**一元 Sheffer**，论文同样把它列为开放问题。（论文第 16 页）
+**This is the engineering mindset:** don't wait for a closed-form proof. Build a fast filter, then verify survivors.
 
 ---
 
-## 8. 如果我要把这篇论文转成工程项目，会怎么拆
+## 4. The Engineering Reality
 
-我会拆成四层：
+Reading the paper is one thing. Turning it into a library is another. Here's how we did it in `packages/emlib`.
 
-### 层 1：表达层
+### 4.1 Two ASTs, Not One
 
-定义两套 AST：
+We maintain two expression languages:
 
-- 标准初等表达式 AST；
-- 纯 EML AST。
+- **Standard AST**: `num`, `var`, `const`, `add`, `sub`, `mul`, `div`, `pow`, `neg`, `exp`, `ln`, `sqrt`, `sin`, `cos`, ... (the full 23+ unary + 6 binary family)
+- **Pure EML AST**: `num`, `var`, `const`, `eml`
 
-### 层 2：规则层
+Every standard expression can be lowered to pure EML. Every pure EML tree can (sometimes) be lifted back to a readable standard expression.
 
-建立双向规则：
+This isn't gratuitous abstraction. The two representations serve completely different purposes:
 
-- lowering：标准表达式 → EML；
-- lifting：EML → 标准表达式；
-- simplification：成本最小化。
+- Standard AST is for **humans** (parsing, printing, simplifying).
+- Pure EML is for **search** (uniform tree shape means uniform search space).
 
-### 层 3：搜索层
+### 4.2 Lowering: Standard → Pure EML
 
-在规则不够时，用启发式搜索：
+The `lower.ts` module implements the compilation pipeline. It's essentially a term-rewriting system with memoization.
 
-- beam / A\* / best-first；
-- e-graph 风格饱和；
-- 数值指纹去重；
-- 多点验证与候选排序。
+Key insight: `reduceTypes(expr)` doesn't just transliterate. It actively **chooses the shortest representation** among multiple EML encodings for the same mathematical object.
 
-### 层 4：验证层
+For example, negation has two witnesses:
 
-- 复数数值验证；
-- 多采样点等价校验；
-- 可选 CAS/SMT/符号证明接口。
+```
+// Short witness from the paper (15 tokens)
+-x = E(E(1,E(1,E(1,E(E(1,1),1)))), E(x,1))
 
-这正是我这次给你实现的 TypeScript lib 的设计方向：
+// Generic witness via definition (more tokens)
+-x = E(E(1,E(E(E(1,E(E(1,E(1,x)),1)),E(1,E(E(1,E(E(...
+```
 
-- **核心库**先实现 AST、parser、printer、EML evaluator；
-- **精确内置 lowering**先覆盖主文中明确出现的 `exp`、`ln`、`e`、`0`；
-- **启发式 synth 模块**提供按叶子数和样本点进行 EML witness 搜索的框架；
-- **reverse simplifier** 用代价驱动搜索把部分纯 EML 重新抬回标准初等表达式。
+The library stores both and picks the shorter one via `chooseShortest`. Same for multiplication, division, etc.
 
-之所以没有在内核里声称“已经精确内置所有加减乘除/三角函数公式”，不是因为做不到，而是因为**主文没有把这些公式完全展开**，而我不想把未经独立验证的猜测硬写成库默认规则。
+This is where engineering diverges from pure math. The paper proves existence. The library has to care about **token count** because it determines whether the search space is tractable.
+
+### 4.3 Lifting: Pure EML → Standard
+
+This is the hard direction. Lowering is deterministic. Lifting is a search problem.
+
+The `rewrite.ts` module implements a **cost-driven rewrite engine**:
+
+1. **Pattern matching**: Template rules like `exp(ln(?x)+ln(?y)) → ?x*?y`
+2. **Greedy normalization**: Apply local rewrites until fixed point
+3. **Beam search**: When greedy gets stuck, explore neighbors and keep the best `tokenScore`
+4. **Exact folding**: Evaluate constant subexpressions losslessly (rational + complex arithmetic)
+
+The scoring function is deliberately simple:
+
+```typescript
+tokenScore(expr) = tokenCount(expr) + 0.05 * typeCount(expr);
+```
+
+Fewer tokens = better. Fewer distinct operators = better. This biases the search toward human-readable forms.
+
+### 4.4 Pattern Matching: The Hack We Keep
+
+The rewrite engine's templates are written as strings like `"?x+?y"`. Our parser doesn't natively understand `?x`, so `compilePattern` does a string replacement:
+
+```typescript
+"?x+?y" → "__h0__+__h0__" → parse() → walk AST → convert vars back to holes
+```
+
+Is this elegant? No. Is it correct, maintainable, and preserves the readability of template definitions? Yes.
+
+The "purist" alternative is a separate pattern parser. We considered it. The cost is either:
+
+- Duplicating the entire expression grammar for patterns, or
+- Making the main parser aware of holes, which then leaks into `lower.ts` (where `reduceTypes` doesn't know what to do with holes)
+
+In a system where templates are written by humans and read far more often than they're compiled, **string templates win**. The `_hN_` prefix is an implementation detail hidden inside `compilePattern`. It never escapes the pattern module.
+
+### 4.5 Synthesis: Searching the EML Space
+
+The `synth.ts` module implements the paper's core idea: **if every formula is a binary tree of identical nodes, you can search the space structurally.**
+
+`synthesizePureEml(target, options)`:
+
+1. Evaluates the target expression at sample points.
+2. Builds EML trees bottom-up (leaves = `1` and variables).
+3. Uses a **semantic fingerprint** (`fingerprint(values)`) to deduplicate equivalent trees without parsing.
+4. Keeps a **beam frontier** per tree size, pruning by MSE and token count.
+5. Stops when a tree matches the target within tolerance.
+
+This is a direct implementation of the numerical bootstrap described in the paper. The difference is that our library does it in TypeScript with complex-number evaluation, not Mathematica.
 
 ---
 
-## 9. 你应该如何评价这篇论文
+## 5. The Things Nobody Tells You
 
-我认为最合理的评价是：
+### 5.1 EML Is Not Shorter
 
-### 它很可能是“表示论突破”，不只是“公式收藏”
+Do not use EML because it's compact. It isn't.
 
-如果结果成立且 SI 验证扎实，那么真正的贡献不是“又发现几个恒等式”，而是：
+| Function | Standard Form | EML Tokens |
+| -------- | ------------- | ---------- |
+| `exp(x)` | 3             | 3          |
+| `ln(x)`  | 3             | 7          |
+| `-x`     | 2             | 15         |
+| `x*y`    | 3             | 17-25      |
+| `1/2`    | 3             | 29-39      |
+| `π`      | 1             | >53        |
 
-- 找到连续数学里的一个单原语候选；
-- 给出了统一树表示；
-- 让符号回归获得一个理论上完备、结构上规整的搜索空间。
+EML's value is **structural uniformity**, not brevity. A heterogeneous grammar (`sin`, `+`, `^`, `log`) has dozens of node types. EML has one. That uniformity makes search, circuit mapping, and hardware compilation tractable in ways that "just use exp and ln" never could.
 
-### 它最需要补强的是“可复现的完整 witness 库”
+### 5.2 Complex Numbers Are Not Optional
 
-对后续工程非常关键的是：
+To get `i`, you need `ln(-1)`. To get `sin(x)`, you need Euler's formula. EML operates internally over `ℂ`, even when the final answer is real.
 
-- 每个基本运算的最短/较短 EML witness；
-- 分支策略；
-- 多实现一致性；
-- 编译器与验证器。
+This has teeth:
 
-主文已经有这个方向，但如果要成为真正可用的编译/回归基础设施，这一层必须彻底产品化。
+- **Branch cuts**: `ln(z)` on the negative real axis jumps by `2πi`. The paper discusses this extensively because it breaks naive implementations.
+- **`ln(0) = -∞`**: Required for some witnesses to work. Lean 4 assigns `Complex.log 0 = 0` (a junk value), which breaks the EML chain entirely.
+- **IEEE 754**: Works fine because `inf` and signed zeros are first-class. Pure Python fails because it traps on `log(0)`.
+
+Our evaluator handles complex numbers natively. If you try to evaluate a pure EML tree that branches through `ln(-1)`, it just works—provided you accept the principal branch.
+
+### 5.3 The "Constant-Free Sheffer" Is Still Open
+
+NAND can generate `0` and `1` from any input: `NAND(x, NAND(x, x)) = 1`. EML cannot do this. You _must_ have the distinguished constant `1` (or `e`, or `-∞`) in your terminal set.
+
+The paper explicitly leaves this as an open problem. A ternary operator has been found that requires no constant, but the binary case remains unresolved.
 
 ---
 
-## 10. 读完以后最值得记住的 5 句话
+## 6. What This Enables
 
-1. **这篇论文的核心不是 exp 和 ln，而是“单一二元原语”的存在。**
-2. **EML 的价值主要在统一表示，不在表达长度。**
-3. **复数中间过程不是瑕疵，而是这套系统的必要代价之一。**
-4. **它给符号回归提供了一个理论上完备、结构统一的搜索空间。**
-5. **真正的下一步不是再写几条恒等式，而是做完整的编译器、验证器和搜索器。**
+### Symbolic Regression with a Fixed Architecture
+
+Modern symbolic regression struggles with grammar selection:
+
+- Do you include `sin`? What if the true law is `sinh`?
+- Do you include `exp`? What if it's `x^2.3`?
+- Every missing operator is a blind spot.
+
+EML removes the question entirely. The search space is **complete by construction**: any elementary function is in there somewhere. The master formula is just a parameterized binary tree:
+
+```
+F(x) = eml(α1 + β1*x + γ1*eml(...), α2 + β2*x + γ2*eml(...))
+```
+
+Train the `α, β, γ` weights with Adam. If they snap to `{0,1}`, you've recovered an exact closed form. The paper reports 100% success at depth 2, ~25% at depths 3-4, <1% at depth 5.
+
+The optimization landscape is hard. But it exists.
+
+### Single-Instruction Machines
+
+An EML expression is just a sequence of RPN instructions on a stack machine. Every instruction is the same opcode. This is:
+
+- Trivial to implement in hardware (FPGA, analog circuits)
+- Trivial to JIT-compile
+- Trivial to serialize
+
+The paper's Table 3 draws the analogy explicitly: NAND gate → Op-Amp → Transistor → EML Sheffer.
+
+### Interpretability
+
+When a neural network finds a pattern, you get weights. When an EML tree converges, you get a formula you can read, differentiate, and verify. The author calls this "legibility as elementary function expressions."
 
 ---
 
-## 11. 和这次交付的 TypeScript lib 的关系
+## 7. Reading the Paper (If You Bother)
 
-我附带实现的 `eml-ts-lib` 不是“论文全部结果的最终工业版”，而是一个**可继续扩展的干净内核**：
+Skip the proofs on first read. Go in this order:
 
-- AST / parser / printer
-- 复数 evaluator
-- 精确 lowering：`exp`、`ln`、`e`、`0`
-- 纯 EML → 标准表达式的局部反向化简
-- 基于数值样本与叶子数限制的启发式 `synthesizePureEml`
+1. **Abstract + Summary paragraph** (pages 1-2): establishes the NAND analogy.
+2. **Table 2** (page 8): the reduction countdown. This is the whole story.
+3. **Section 4.3** (pages 12-14): the symbolic regression experiments. This is where the operator stops being a curiosity and starts being useful.
+4. **Figure 2** (page 22): concrete EML trees for `ln(x)`, `-x`, `1/x`, `x*y`. Stare at these until they make sense.
+5. **Everything else**: details, edge cases, branch discussions.
 
-这套结构已经能作为后续两条路线的起点：
+Do not read it as a theorem paper. Read it as a **systems paper** about a weird CPU instruction set that happens to be Turing-complete for continuous math.
 
-1. **补充更完整的 witness 数据库**，逐步把 `+,-,*,/,pow,sqrt,sin,cos,...` 注册成精确 lowering；
-2. **把 synth 模块升级为真正的 A\* / e-graph / SAT+numeric hybrid 搜索器**，让库自己找到并验证 witness。
+---
 
-如果你接下来要继续推进，我建议下一个阶段直接做三件事：
+## 8. The Codebase
 
-- 导入论文 SI 中的完整 witness 链；
-- 建立“标准表达式成本模型”；
-- 为每条 witness 增加多点复数验证和 property-based tests。
+This repo (`packages/emlib`) is a clean-slate implementation of the paper's ideas in TypeScript. It's not a port of the author's Mathematica/Rust toolkits. It's designed for:
+
+- **Embedding**: Small enough to bundle into a web app.
+- **Hacking**: No build system black magic. Just `bun test`.
+- **Extension**: The pattern-matching and search infrastructure is generic. Add new rewrite rules by writing strings.
+
+Current status:
+
+- ✅ Parser / printer for standard expressions
+- ✅ Complex evaluator (IEEE 754-ish, with `inf`/`nan`)
+- ✅ Exact rational arithmetic (`1/3 + 1/6 = 1/2`, not `0.5000001`)
+- ✅ Full lowering of 23 unary + 6 binary operators to pure EML
+- ✅ Lifting / simplification via pattern matching + beam search
+- ✅ Synthesis of pure EML witnesses from numerical samples
+- ✅ Optional compression (search for shorter equivalent EML trees)
+- ✅ Gradient-based master formula training with Adam (`master.ts` + `train.ts`)
+
+Not implemented (yet):
+
+- Branch-cut aware rewriting
+- Full SI witness database import
+
+---
+
+## 9. The Bottom Line
+
+Mathematics doesn't usually work like this. We don't discover new primitives by brute-force search. We prove theorems.
+
+But sometimes the theorem _is_ the search. EML wasn't derived. It was found, numerically sifted, and then verified after the fact. The fact that it works—that a single operator `exp(x) - ln(y)` is enough—is a statement about the structure of elementary functions that no one anticipated.
+
+If you're building anything that searches over formulas, this matters. Not because EML is shorter. Because EML is **one**. And one is a much better number than thirty-six.
+
+---
+
+_Paper: Andrzej Odrzywolek, "All elementary functions from a single operator", arXiv:2603.21852v2_
+_Code: `packages/emlib/` in this repo_

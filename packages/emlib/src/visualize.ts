@@ -1,4 +1,5 @@
 import type { Expr } from "./ast";
+import { isBinaryExpr, isUnaryExpr } from "./ast";
 
 export interface D2ExportOptions {
   nodePrefix?: string;
@@ -85,50 +86,14 @@ function renderExprTree(
   const visual = nodeVisual(expr);
   pushNode(state, id, visual.className, visual.label);
 
-  switch (expr.kind) {
-    case "eml":
-    case "add":
-    case "sub":
-    case "mul":
-    case "div":
-    case "pow": {
-      const leftId = renderExprTree(expr.left, state, nodePrefix, edgeLabels);
-      const rightId = renderExprTree(expr.right, state, nodePrefix, edgeLabels);
-      pushEdge(state, id, leftId, edgeLabels ? "x" : null);
-      pushEdge(state, id, rightId, edgeLabels ? "y" : null);
-      break;
-    }
-    case "neg":
-    case "exp":
-    case "ln":
-    case "sqrt":
-    case "sin":
-    case "cos":
-    case "tan":
-    case "cot":
-    case "sec":
-    case "csc":
-    case "sinh":
-    case "cosh":
-    case "tanh":
-    case "coth":
-    case "sech":
-    case "csch":
-    case "asin":
-    case "acos":
-    case "atan":
-    case "asec":
-    case "acsc":
-    case "acot":
-    case "asinh":
-    case "acosh":
-    case "atanh": {
-      const childId = renderExprTree(expr.value, state, nodePrefix, edgeLabels);
-      pushEdge(state, id, childId, edgeLabels ? "arg" : null);
-      break;
-    }
-    default:
-      break;
+  if (isBinaryExpr(expr)) {
+    const leftId = renderExprTree(expr.left, state, nodePrefix, edgeLabels);
+    const rightId = renderExprTree(expr.right, state, nodePrefix, edgeLabels);
+    pushEdge(state, id, leftId, edgeLabels ? "x" : null);
+    pushEdge(state, id, rightId, edgeLabels ? "y" : null);
+  } else if (isUnaryExpr(expr)) {
+    const childId = renderExprTree(expr.value, state, nodePrefix, edgeLabels);
+    pushEdge(state, id, childId, edgeLabels ? "arg" : null);
   }
 
   return id;

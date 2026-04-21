@@ -1,6 +1,6 @@
 import type { Expr } from "./ast";
-import { exprEquals, isNumericValue, num } from "./ast";
-import { countTokens, countTypes } from "./analyze";
+import { exprEquals, isOne, isZero, num, isBinaryExpr, isUnaryExpr, rewriteChildren } from "./ast";
+import { containsEml, containsVariable, countTokens, countTypes, exprKey } from "./analyze";
 import { reduceTypes } from "./lower";
 import { evaluateLossless, valueToExpr } from "./numeric";
 import { parse } from "./parser";
@@ -156,30 +156,6 @@ let earlyPureLiftRules: RewriteRule[] | null = null;
 
 const exactPureLiftCache = new WeakMap<Expr, Expr>();
 const exactFoldCache = new WeakMap<Expr, Expr>();
-const containsVariableCache = new WeakMap<Expr, boolean>();
-const containsEmlCache = new WeakMap<Expr, boolean>();
-
-// ============================================================================
-// Simple predicates
-// ============================================================================
-
-function isOne(e: Expr): boolean {
-  return isNumericValue(e, 1);
-}
-function isZero(e: Expr): boolean {
-  return isNumericValue(e, 0);
-}
-function sameValue(a: Expr, b: Expr): boolean {
-  return exprEquals(a, b);
-}
-
-function isBinaryExpr(expr: Expr): expr is BinaryExprNode {
-  return typeof expr === "object" && expr !== null && "left" in expr && "right" in expr;
-}
-
-function isUnaryExpr(expr: Expr): expr is UnaryExprNode {
-  return typeof expr === "object" && expr !== null && "value" in expr && !("raw" in expr);
-}
 
 function isPatternBinaryExpr(pattern: PatternExpr): pattern is PatternBinaryNode {
   return "left" in pattern && "right" in pattern;
@@ -187,23 +163,6 @@ function isPatternBinaryExpr(pattern: PatternExpr): pattern is PatternBinaryNode
 
 function isPatternUnaryExpr(pattern: PatternExpr): pattern is PatternUnaryNode {
   return "value" in pattern && !("raw" in pattern);
-}
-
-// ============================================================================
-// Child rewriting
-// ============================================================================
-
-function rewriteChildren(expr: Expr, recurse: (child: Expr) => Expr): Expr {
-  if (isBinaryExpr(expr)) {
-    const left = recurse(expr.left);
-    const right = recurse(expr.right);
-    return left === expr.left && right === expr.right ? expr : { ...expr, left, right };
-  }
-  if (isUnaryExpr(expr)) {
-    const value = recurse(expr.value);
-    return value === expr.value ? expr : { ...expr, value };
-  }
-  return expr;
 }
 
 // ============================================================================
@@ -490,36 +449,6 @@ function getEarlyPureLiftRules(): RewriteRule[] {
   return earlyPureLiftRules;
 }
 
-function containsVariable(expr: Expr): boolean {
-  const cached = containsVariableCache.get(expr);
-  if (cached !== undefined) return cached;
-
-  const value =
-    expr.kind === "var" ||
-    (isBinaryExpr(expr)
-      ? containsVariable(expr.left) || containsVariable(expr.right)
-      : isUnaryExpr(expr)
-        ? containsVariable(expr.value)
-        : false);
-  containsVariableCache.set(expr, value);
-  return value;
-}
-
-function containsEml(expr: Expr): boolean {
-  const cached = containsEmlCache.get(expr);
-  if (cached !== undefined) return cached;
-
-  const value =
-    expr.kind === "eml" ||
-    (isBinaryExpr(expr)
-      ? containsEml(expr.left) || containsEml(expr.right)
-      : isUnaryExpr(expr)
-        ? containsEml(expr.value)
-        : false);
-  containsEmlCache.set(expr, value);
-  return value;
-}
-
 function liftExactPureForms(expr: Expr): Expr {
   const cached = exactPureLiftCache.get(expr);
   if (cached) return cached;
@@ -588,12 +517,12 @@ const foldBasicRule: RewriteRule = {
         break;
       case "sub":
         if (isZero(expr.right)) return [expr.left];
-        if (sameValue(expr.left, expr.right)) return [num(0)];
+        if (exprEquals(expr.left, expr.right)) return [num(0)];
         break;
       case "mul":
         if (isOne(expr.left)) return [expr.right];
         if (isOne(expr.right)) return [expr.left];
-        if (sameValue(expr.left, expr.right))
+        if (exprEquals(expr.left, expr.right))
           return [{ kind: "pow", left: expr.left, right: num(2) }];
         if (expr.left.kind === "div" && isOne(expr.left.left))
           return [{ kind: "div", left: expr.right, right: expr.left.right }];
@@ -602,7 +531,7 @@ const foldBasicRule: RewriteRule = {
         break;
       case "div":
         if (isOne(expr.right)) return [expr.left];
-        if (sameValue(expr.left, expr.right)) return [num(1)];
+        if (exprEquals(expr.left, expr.right)) return [num(1)];
         break;
       case "pow":
         if (isOne(expr.right)) return [expr.left];
@@ -758,41 +687,14 @@ export interface SearchOptions {
   rules?: RewriteRule[];
 }
 
-const tokenCountCache = new WeakMap<Expr, number>();
-const typeCountCache = new WeakMap<Expr, number>();
 const tokenScoreCache = new WeakMap<Expr, number>();
 const readabilityPenaltyCache = new WeakMap<Expr, number>();
-const exprKeyCache = new WeakMap<Expr, string>();
 const applyRulesCache = new WeakMap<ReadonlyArray<RewriteRule>, WeakMap<Expr, Expr>>();
-
-function exprKey(expr: Expr): string {
-  const cached = exprKeyCache.get(expr);
-  if (cached !== undefined) return cached;
-  const key = toString(expr);
-  exprKeyCache.set(expr, key);
-  return key;
-}
-
-function tokenCount(expr: Expr): number {
-  const cached = tokenCountCache.get(expr);
-  if (cached !== undefined) return cached;
-  const count = countTokens(expr);
-  tokenCountCache.set(expr, count);
-  return count;
-}
-
-function typeCount(expr: Expr): number {
-  const cached = typeCountCache.get(expr);
-  if (cached !== undefined) return cached;
-  const count = countTypes(expr);
-  typeCountCache.set(expr, count);
-  return count;
-}
 
 function tokenScore(expr: Expr): number {
   const cached = tokenScoreCache.get(expr);
   if (cached !== undefined) return cached;
-  const score = tokenCount(expr) + 0.05 * typeCount(expr);
+  const score = countTokens(expr) + 0.05 * countTypes(expr);
   tokenScoreCache.set(expr, score);
   return score;
 }
@@ -805,7 +707,7 @@ function readabilityPenalty(expr: Expr): number {
   switch (expr.kind) {
     case "mul":
       penalty =
-        (sameValue(expr.left, expr.right) ? 4 : 1) +
+        (exprEquals(expr.left, expr.right) ? 4 : 1) +
         readabilityPenalty(expr.left) +
         readabilityPenalty(expr.right);
       break;
@@ -836,11 +738,11 @@ function readabilityPenalty(expr: Expr): number {
 }
 
 function compareReadable(a: Expr, b: Expr): number {
-  const tokenDiff = tokenCount(a) - tokenCount(b);
+  const tokenDiff = countTokens(a) - countTokens(b);
   if (tokenDiff !== 0) return tokenDiff;
   const readabilityDiff = readabilityPenalty(a) - readabilityPenalty(b);
   if (readabilityDiff !== 0) return readabilityDiff;
-  const typeDiff = typeCount(a) - typeCount(b);
+  const typeDiff = countTypes(a) - countTypes(b);
   if (typeDiff !== 0) return typeDiff;
   return exprKey(a).localeCompare(exprKey(b));
 }

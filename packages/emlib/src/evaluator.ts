@@ -1,5 +1,5 @@
 import type { Expr } from "./ast";
-import { isNumericValue } from "./ast";
+import { isOne } from "./ast";
 import { desugarElementary } from "./elementary";
 import {
   createLosslessEvaluator,
@@ -55,22 +55,18 @@ export function cCos(a: Complex): Complex {
   return C(Math.cos(a.re) * Math.cosh(a.im), -Math.sin(a.re) * Math.sinh(a.im));
 }
 
-function isOneExpr(expr: Expr): boolean {
-  return isNumericValue(expr, 1);
-}
-
 function matchEmlExp(expr: Expr): Expr | null {
-  return expr.kind === "eml" && isOneExpr(expr.right) ? expr.left : null;
+  return expr.kind === "eml" && isOne(expr.right) ? expr.left : null;
 }
 
 function matchEmlLn(expr: Expr): Expr | null {
   if (
     expr.kind === "eml" &&
-    isOneExpr(expr.left) &&
+    isOne(expr.left) &&
     expr.right.kind === "eml" &&
     expr.right.left.kind === "eml" &&
-    isOneExpr(expr.right.left.left) &&
-    isOneExpr(expr.right.right)
+    isOne(expr.right.left.left) &&
+    isOne(expr.right.right)
   ) {
     return expr.right.left.right;
   }
@@ -90,7 +86,7 @@ function toApprox(value: LosslessValue): Complex | null {
   return C(approx.re, approx.im);
 }
 
-export function evaluateApprox(expr: Expr, env: Record<string, Complex | number> = {}): Complex {
+export function evaluate(expr: Expr, env: Record<string, Complex | number> = {}): Complex {
   const losslessEnv = env as Record<string, LosslessInput>;
   const evaluateLosslessNode = createLosslessEvaluator(losslessEnv);
   const approxMemo = new WeakMap<Expr, Complex>();
@@ -206,6 +202,5 @@ export function evaluateApprox(expr: Expr, env: Record<string, Complex | number>
   return evaluateNode(expr);
 }
 
-export function evaluate(expr: Expr, env: Record<string, Complex | number> = {}): Complex {
-  return evaluateApprox(expr, env);
-}
+/** @deprecated Use `evaluate` directly. */
+export const evaluateApprox = evaluate;

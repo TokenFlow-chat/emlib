@@ -1,5 +1,5 @@
 import type { Expr } from "./ast";
-import { add, div, exp, ln, mul, neg, num, pow, sqrt, sub, constant } from "./ast";
+import { add, div, exp, ln, mul, neg, num, pow, rewriteChildren, sqrt, sub, constant } from "./ast";
 
 const ONE = num(1);
 const TWO = num(2);
@@ -54,19 +54,6 @@ export function desugarElementary(expr: Expr): Expr {
     case "var":
     case "const":
       return expr;
-    case "eml":
-      return { ...expr, left: desugarElementary(expr.left), right: desugarElementary(expr.right) };
-    case "neg":
-    case "exp":
-    case "ln":
-    case "sqrt":
-      return { ...expr, value: desugarElementary(expr.value) };
-    case "add":
-    case "sub":
-    case "mul":
-    case "div":
-    case "pow":
-      return { ...expr, left: desugarElementary(expr.left), right: desugarElementary(expr.right) };
     case "sin":
       return sinCore(desugarElementary(expr.value));
     case "cos":
@@ -121,5 +108,7 @@ export function desugarElementary(expr: Expr): Expr {
       return acoshCore(desugarElementary(expr.value));
     case "atanh":
       return atanhCore(desugarElementary(expr.value));
+    default:
+      return rewriteChildren(expr, desugarElementary);
   }
 }

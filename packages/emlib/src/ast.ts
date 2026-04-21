@@ -92,45 +92,41 @@ export function isNumericValue(expr: Expr, target: number): boolean {
   return expr.kind === "num" && expr.value === target;
 }
 
-export function mapChildren(expr: Expr, fn: (expr: Expr) => Expr): Expr {
-  switch (expr.kind) {
-    case "eml":
-    case "add":
-    case "sub":
-    case "mul":
-    case "div":
-    case "pow":
-      return { ...expr, left: fn(expr.left), right: fn(expr.right) } as Expr;
-    case "neg":
-    case "exp":
-    case "ln":
-    case "sqrt":
-    case "sin":
-    case "cos":
-    case "tan":
-    case "cot":
-    case "sec":
-    case "csc":
-    case "sinh":
-    case "cosh":
-    case "tanh":
-    case "coth":
-    case "sech":
-    case "csch":
-    case "asin":
-    case "acos":
-    case "atan":
-    case "asec":
-    case "acsc":
-    case "acot":
-    case "asinh":
-    case "acosh":
-    case "atanh":
-      return { ...expr, value: fn(expr.value) } as Expr;
-    default:
-      return expr;
-  }
+export function isZero(expr: Expr): boolean {
+  return isNumericValue(expr, 0);
 }
+
+export function isOne(expr: Expr): boolean {
+  return isNumericValue(expr, 1);
+}
+
+export function isNegativeOne(expr: Expr): boolean {
+  return isNumericValue(expr, -1);
+}
+
+export function isBinaryExpr(expr: Expr): expr is BinaryExpr {
+  return typeof expr === "object" && expr !== null && "left" in expr && "right" in expr;
+}
+
+export function isUnaryExpr(expr: Expr): expr is UnaryExpr {
+  return typeof expr === "object" && expr !== null && "value" in expr && !("raw" in expr);
+}
+
+export function rewriteChildren(expr: Expr, fn: (expr: Expr) => Expr): Expr {
+  if (isBinaryExpr(expr)) {
+    const left = fn(expr.left);
+    const right = fn(expr.right);
+    return left === expr.left && right === expr.right ? expr : ({ ...expr, left, right } as Expr);
+  }
+  if (isUnaryExpr(expr)) {
+    const value = fn(expr.value);
+    return value === expr.value ? expr : ({ ...expr, value } as Expr);
+  }
+  return expr;
+}
+
+/** @deprecated Use {@link rewriteChildren} for reference-equality optimization. */
+export const mapChildren = rewriteChildren;
 
 export function exprEquals(a: Expr, b: Expr): boolean {
   return JSON.stringify(a) === JSON.stringify(b);

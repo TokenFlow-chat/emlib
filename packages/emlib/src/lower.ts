@@ -1,20 +1,11 @@
 import type { Expr } from "./ast";
-import { eml, exprEquals, isNumericValue, num, variable } from "./ast";
-import { countTokens } from "./analyze";
+import { eml, exprEquals, isOne, isZero, isNegativeOne, num, variable } from "./ast";
+import { countTokens, exprKey } from "./analyze";
 import { desugarElementary } from "./elementary";
 import { parseRationalLiteral } from "./numeric";
-import { toString } from "./print";
-import { compressPureEml, type CompressionLevel, type SampleEnv } from "./synth";
 
 export interface LowerOptions {
   strict?: boolean;
-  compression?: CompressionLevel;
-  compressionSamples?: SampleEnv[];
-  validationSamples?: SampleEnv[];
-  compressionBeamWidth?: number;
-  compressionMaxLeaves?: number;
-  maxDelta?: number;
-  minTokenGain?: number;
 }
 
 const ONE = num(1);
@@ -25,9 +16,6 @@ let twoCache: Expr | null = null;
 let iCache: Expr | null = null;
 let piCache: Expr | null = null;
 const intCache = new Map<string, Expr>();
-const tokenCache = new WeakMap<Expr, number>();
-const compressionCache = new Map<string, Expr>();
-const exprKeyCache = new WeakMap<Expr, string>();
 const expCache = new Map<string, Expr>();
 const lnCache = new Map<string, Expr>();
 const negCache = new Map<string, Expr>();
@@ -40,22 +28,6 @@ const powCache = new Map<string, Expr>();
 const rationalCache = new Map<string, Expr>();
 const CACHE_LIMIT = 4096;
 
-function tokenCost(expr: Expr): number {
-  const cached = tokenCache.get(expr);
-  if (cached !== undefined) return cached;
-  const value = countTokens(expr);
-  tokenCache.set(expr, value);
-  return value;
-}
-
-function exprKey(expr: Expr): string {
-  const cached = exprKeyCache.get(expr);
-  if (cached !== undefined) return cached;
-  const key = toString(expr);
-  exprKeyCache.set(expr, key);
-  return key;
-}
-
 function setCapped<K, V>(map: Map<K, V>, key: K, value: V, limit = CACHE_LIMIT): void {
   if (!map.has(key) && map.size >= limit) {
     map.clear();
@@ -64,8 +36,8 @@ function setCapped<K, V>(map: Map<K, V>, key: K, value: V, limit = CACHE_LIMIT):
 }
 
 function betterExpr(a: Expr, b: Expr): Expr {
-  const aCost = tokenCost(a);
-  const bCost = tokenCost(b);
+  const aCost = countTokens(a);
+  const bCost = countTokens(b);
   if (aCost !== bCost) return aCost < bCost ? a : b;
   return exprKey(a) <= exprKey(b) ? a : b;
 }
@@ -83,54 +55,6 @@ function chooseShortest(...candidates: Expr[]): Expr {
   }
   if (!best) throw new Error("Expected at least one lowering candidate");
   return best;
-}
-
-function compressionCacheKey(expr: Expr, options: LowerOptions): string {
-  const sampleKey = (samples?: SampleEnv[]) =>
-    samples
-      ? samples
-          .map((env) =>
-            Object.keys(env)
-              .sort()
-              .map((key) => `${key}:${env[key]}`)
-              .join(","),
-          )
-          .join(";")
-      : "";
-  return [
-    exprKey(expr),
-    String(options.compression ?? "off"),
-    String(options.compressionBeamWidth ?? ""),
-    String(options.compressionMaxLeaves ?? ""),
-    String(options.maxDelta ?? ""),
-    String(options.minTokenGain ?? ""),
-    sampleKey(options.compressionSamples),
-    sampleKey(options.validationSamples),
-  ].join("|");
-}
-
-function maybeCompressPureEml(expr: Expr, options: LowerOptions): Expr {
-  const compression = options.compression ?? "off";
-  if (compression === "off" || compression === 0) return expr;
-  if (tokenCost(expr) < 9) return expr;
-
-  const key = compressionCacheKey(expr, options);
-  const cached = compressionCache.get(key);
-  if (cached) return cached;
-
-  const compressed =
-    compressPureEml(expr, {
-      compression,
-      samples: options.compressionSamples,
-      validationSamples: options.validationSamples,
-      beamWidth: options.compressionBeamWidth,
-      maxLeaves: options.compressionMaxLeaves,
-      maxDelta: options.maxDelta,
-      minTokenGain: options.minTokenGain,
-    })?.expr ?? expr;
-
-  setCapped(compressionCache, key, compressed, 1024);
-  return compressed;
 }
 
 export function emlExp(x: Expr): Expr {
@@ -368,18 +292,6 @@ function lowerConst(name: "e" | "pi" | "i"): Expr {
   }
 }
 
-function isZeroExpr(expr: Expr): boolean {
-  return isNumericValue(expr, 0);
-}
-
-function isOneExpr(expr: Expr): boolean {
-  return isNumericValue(expr, 1);
-}
-
-function isNegativeOneExpr(expr: Expr): boolean {
-  return isNumericValue(expr, -1);
-}
-
 export function reduceTypes(expr: Expr, options: LowerOptions = {}): Expr {
   const expanded = desugarElementary(expr);
   const memo = new Map<string, Expr>();
@@ -410,7 +322,7 @@ export function reduceTypes(expr: Expr, options: LowerOptions = {}): Expr {
         result = node.value.kind === "exp" ? lower(node.value.value) : emlLn(lower(node.value));
         break;
       case "neg":
-        if (isZeroExpr(node.value)) {
+        if (isZero(node.value)) {
           result = emlZero();
           break;
         }
@@ -421,11 +333,11 @@ export function reduceTypes(expr: Expr, options: LowerOptions = {}): Expr {
         result = emlNeg(lower(node.value));
         break;
       case "add":
-        if (isZeroExpr(node.left)) {
+        if (isZero(node.left)) {
           result = lower(node.right);
           break;
         }
-        if (isZeroExpr(node.right)) {
+        if (isZero(node.right)) {
           result = lower(node.left);
           break;
         }
@@ -448,11 +360,11 @@ export function reduceTypes(expr: Expr, options: LowerOptions = {}): Expr {
           result = eml(lower(node.left.value), lower(node.right.value));
           break;
         }
-        if (isZeroExpr(node.right)) {
+        if (isZero(node.right)) {
           result = lower(node.left);
           break;
         }
-        if (isZeroExpr(node.left)) {
+        if (isZero(node.left)) {
           result = emlNeg(lower(node.right));
           break;
         }
@@ -463,57 +375,57 @@ export function reduceTypes(expr: Expr, options: LowerOptions = {}): Expr {
         result = emlSub(lower(node.left), lower(node.right));
         break;
       case "mul":
-        if (isZeroExpr(node.left) || isZeroExpr(node.right)) {
+        if (isZero(node.left) || isZero(node.right)) {
           result = emlZero();
           break;
         }
-        if (isOneExpr(node.left)) {
+        if (isOne(node.left)) {
           result = lower(node.right);
           break;
         }
-        if (isOneExpr(node.right)) {
+        if (isOne(node.right)) {
           result = lower(node.left);
           break;
         }
-        if (isNegativeOneExpr(node.left)) {
+        if (isNegativeOne(node.left)) {
           result = emlNeg(lower(node.right));
           break;
         }
-        if (isNegativeOneExpr(node.right)) {
+        if (isNegativeOne(node.right)) {
           result = emlNeg(lower(node.left));
           break;
         }
         result = emlMul(lower(node.left), lower(node.right));
         break;
       case "div":
-        if (isZeroExpr(node.left)) {
+        if (isZero(node.left)) {
           result = emlZero();
           break;
         }
-        if (isOneExpr(node.right)) {
+        if (isOne(node.right)) {
           result = lower(node.left);
           break;
         }
-        if (isNegativeOneExpr(node.right)) {
+        if (isNegativeOne(node.right)) {
           result = emlNeg(lower(node.left));
           break;
         }
-        if (isOneExpr(node.left)) {
+        if (isOne(node.left)) {
           result = emlInv(lower(node.right));
           break;
         }
         result = emlDiv(lower(node.left), lower(node.right));
         break;
       case "pow": {
-        if (isOneExpr(node.right)) {
+        if (isOne(node.right)) {
           result = lower(node.left);
           break;
         }
-        if (isOneExpr(node.left)) {
+        if (isOne(node.left)) {
           result = ONE;
           break;
         }
-        if (isZeroExpr(node.right)) {
+        if (isZero(node.right)) {
           result = ONE;
           break;
         }
@@ -549,11 +461,7 @@ export function reduceTypes(expr: Expr, options: LowerOptions = {}): Expr {
     return result;
   };
 
-  return maybeCompressPureEml(lower(expanded), options);
-}
-
-export function toPureEml(expr: Expr, options: LowerOptions = {}): Expr {
-  return reduceTypes(expr, options);
+  return lower(expanded);
 }
 
 export function standardCoreLibrary() {
