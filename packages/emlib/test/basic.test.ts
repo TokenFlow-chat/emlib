@@ -82,6 +82,11 @@ test("lossless evaluation stays conservative on branch-sensitive log identities"
   expect(toString(valueToExpr(symbolic))).toBe("ln(exp(1*i))");
 });
 
+test("lossless evaluation cancels identical symbolic subexpressions safely", () => {
+  const symbolicZero = evaluateLossless(parse("sin(1/3)-sin(1/3)"));
+  expect(toString(valueToExpr(symbolicZero))).toBe("0");
+});
+
 test("toPureEml uses compact paper witnesses for key arithmetic forms", () => {
   const cases = [
     ["-x", 15],

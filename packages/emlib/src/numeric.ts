@@ -1,5 +1,19 @@
 import type { Expr } from "./ast";
-import { add, constant, div, exp, exprEquals, ln, mul, neg, num, pow, sqrt, sub } from "./ast";
+import {
+  add,
+  constant,
+  div,
+  exp,
+  exprEquals,
+  isOne,
+  ln,
+  mul,
+  neg,
+  num,
+  pow,
+  sqrt,
+  sub,
+} from "./ast";
 
 export interface Rational {
   num: bigint;
@@ -22,6 +36,239 @@ export type LosslessValue = ComplexRational | SymbolicValue;
 export interface ApproxComplex {
   re: number;
   im: number;
+}
+
+export const approxComplex = (re: number, im = 0): ApproxComplex => ({ re, im });
+const APPROX_ZERO = approxComplex(0);
+const APPROX_ONE = approxComplex(1);
+const APPROX_HALF = approxComplex(0.5);
+const APPROX_I = approxComplex(0, 1);
+const APPROX_NEG_I = approxComplex(0, -1);
+
+function approxIsReal(value: ApproxComplex): boolean {
+  return value.im === 0;
+}
+
+export function approxAdd(a: ApproxComplex, b: ApproxComplex): ApproxComplex {
+  return approxComplex(a.re + b.re, a.im + b.im);
+}
+
+export function approxSub(a: ApproxComplex, b: ApproxComplex): ApproxComplex {
+  return approxComplex(a.re - b.re, a.im - b.im);
+}
+
+export function approxMul(a: ApproxComplex, b: ApproxComplex): ApproxComplex {
+  return approxComplex(a.re * b.re - a.im * b.im, a.re * b.im + a.im * b.re);
+}
+
+export function approxDiv(a: ApproxComplex, b: ApproxComplex): ApproxComplex {
+  const denom = b.re * b.re + b.im * b.im;
+  return approxComplex((a.re * b.re + a.im * b.im) / denom, (a.im * b.re - a.re * b.im) / denom);
+}
+
+export function approxNeg(a: ApproxComplex): ApproxComplex {
+  return approxComplex(-a.re, -a.im);
+}
+
+export function approxAbs(a: ApproxComplex): number {
+  return Math.hypot(a.re, a.im);
+}
+
+export function approxArg(a: ApproxComplex): number {
+  return Math.atan2(a.im, a.re);
+}
+
+export function approxExp(a: ApproxComplex): ApproxComplex {
+  if (approxIsReal(a)) {
+    return approxComplex(Math.exp(a.re));
+  }
+  const er = Math.exp(a.re);
+  return approxComplex(er * Math.cos(a.im), er * Math.sin(a.im));
+}
+
+export function approxLog(a: ApproxComplex): ApproxComplex {
+  if (approxIsReal(a) && a.re > 0) {
+    return approxComplex(Math.log(a.re));
+  }
+  return approxComplex(Math.log(approxAbs(a)), approxArg(a));
+}
+
+export function approxPow(a: ApproxComplex, b: ApproxComplex): ApproxComplex {
+  if (b.re === 0 && b.im === 0) return APPROX_ONE;
+  if (a.re === 0 && a.im === 0 && b.im === 0 && b.re > 0) return APPROX_ZERO;
+  if (approxIsReal(a) && approxIsReal(b) && (a.re >= 0 || Number.isInteger(b.re))) {
+    return approxComplex(Math.pow(a.re, b.re));
+  }
+  return approxExp(approxMul(approxLog(a), b));
+}
+
+export function approxSqrt(a: ApproxComplex): ApproxComplex {
+  if (approxIsReal(a)) {
+    return a.re >= 0 ? approxComplex(Math.sqrt(a.re)) : approxComplex(0, Math.sqrt(-a.re));
+  }
+  const r = approxAbs(a);
+  const re = Math.sqrt(Math.max(0, (r + a.re) / 2));
+  const im = Math.sqrt(Math.max(0, (r - a.re) / 2));
+  return approxComplex(re, a.im < 0 ? -im : im);
+}
+
+export function approxSin(a: ApproxComplex): ApproxComplex {
+  if (approxIsReal(a)) {
+    return approxComplex(Math.sin(a.re));
+  }
+  return approxComplex(Math.sin(a.re) * Math.cosh(a.im), Math.cos(a.re) * Math.sinh(a.im));
+}
+
+export function approxCos(a: ApproxComplex): ApproxComplex {
+  if (approxIsReal(a)) {
+    return approxComplex(Math.cos(a.re));
+  }
+  return approxComplex(Math.cos(a.re) * Math.cosh(a.im), -Math.sin(a.re) * Math.sinh(a.im));
+}
+
+export function approxTan(a: ApproxComplex): ApproxComplex {
+  if (approxIsReal(a)) {
+    return approxComplex(Math.tan(a.re));
+  }
+  return approxDiv(approxSin(a), approxCos(a));
+}
+
+export function approxCot(a: ApproxComplex): ApproxComplex {
+  if (approxIsReal(a)) {
+    return approxComplex(1 / Math.tan(a.re));
+  }
+  return approxDiv(approxCos(a), approxSin(a));
+}
+
+export function approxSec(a: ApproxComplex): ApproxComplex {
+  if (approxIsReal(a)) {
+    return approxComplex(1 / Math.cos(a.re));
+  }
+  return approxDiv(approxComplex(1), approxCos(a));
+}
+
+export function approxCsc(a: ApproxComplex): ApproxComplex {
+  if (approxIsReal(a)) {
+    return approxComplex(1 / Math.sin(a.re));
+  }
+  return approxDiv(approxComplex(1), approxSin(a));
+}
+
+export function approxSinh(a: ApproxComplex): ApproxComplex {
+  if (approxIsReal(a)) {
+    return approxComplex(Math.sinh(a.re));
+  }
+  return approxComplex(Math.sinh(a.re) * Math.cos(a.im), Math.cosh(a.re) * Math.sin(a.im));
+}
+
+export function approxCosh(a: ApproxComplex): ApproxComplex {
+  if (approxIsReal(a)) {
+    return approxComplex(Math.cosh(a.re));
+  }
+  return approxComplex(Math.cosh(a.re) * Math.cos(a.im), Math.sinh(a.re) * Math.sin(a.im));
+}
+
+export function approxTanh(a: ApproxComplex): ApproxComplex {
+  if (approxIsReal(a)) {
+    return approxComplex(Math.tanh(a.re));
+  }
+  return approxDiv(approxSinh(a), approxCosh(a));
+}
+
+export function approxCoth(a: ApproxComplex): ApproxComplex {
+  if (approxIsReal(a)) {
+    return approxComplex(1 / Math.tanh(a.re));
+  }
+  return approxDiv(approxCosh(a), approxSinh(a));
+}
+
+export function approxSech(a: ApproxComplex): ApproxComplex {
+  if (approxIsReal(a)) {
+    return approxComplex(1 / Math.cosh(a.re));
+  }
+  return approxDiv(approxComplex(1), approxCosh(a));
+}
+
+export function approxCsch(a: ApproxComplex): ApproxComplex {
+  if (approxIsReal(a)) {
+    return approxComplex(1 / Math.sinh(a.re));
+  }
+  return approxDiv(approxComplex(1), approxSinh(a));
+}
+
+export function approxAsin(a: ApproxComplex): ApproxComplex {
+  if (approxIsReal(a) && a.re >= -1 && a.re <= 1) {
+    return approxComplex(Math.asin(a.re));
+  }
+  return approxMul(
+    APPROX_I,
+    approxLog(
+      approxAdd(approxMul(APPROX_NEG_I, a), approxSqrt(approxSub(APPROX_ONE, approxMul(a, a)))),
+    ),
+  );
+}
+
+export function approxAcos(a: ApproxComplex): ApproxComplex {
+  return approxMul(
+    APPROX_I,
+    approxLog(
+      approxAdd(
+        a,
+        approxMul(approxSqrt(approxSub(a, APPROX_ONE)), approxSqrt(approxAdd(a, APPROX_ONE))),
+      ),
+    ),
+  );
+}
+
+export function approxAtan(a: ApproxComplex): ApproxComplex {
+  if (approxIsReal(a)) {
+    return approxComplex(Math.atan(a.re));
+  }
+  return approxMul(
+    approxComplex(0, -0.5),
+    approxLog(approxDiv(approxAdd(a, APPROX_NEG_I), approxSub(APPROX_NEG_I, a))),
+  );
+}
+
+export function approxAsec(a: ApproxComplex): ApproxComplex {
+  return approxAcos(approxDiv(APPROX_ONE, a));
+}
+
+export function approxAcsc(a: ApproxComplex): ApproxComplex {
+  return approxAsin(approxDiv(APPROX_ONE, a));
+}
+
+export function approxAcot(a: ApproxComplex): ApproxComplex {
+  return approxAtan(approxDiv(APPROX_ONE, a));
+}
+
+export function approxAsinh(a: ApproxComplex): ApproxComplex {
+  if (approxIsReal(a)) {
+    return approxComplex(Math.asinh(a.re));
+  }
+  return approxLog(approxAdd(a, approxSqrt(approxAdd(approxMul(a, a), APPROX_ONE))));
+}
+
+export function approxAcosh(a: ApproxComplex): ApproxComplex {
+  if (approxIsReal(a) && a.re >= 1) {
+    return approxComplex(Math.acosh(a.re));
+  }
+  return approxLog(
+    approxAdd(
+      a,
+      approxMul(approxSqrt(approxAdd(a, APPROX_ONE)), approxSqrt(approxSub(a, APPROX_ONE))),
+    ),
+  );
+}
+
+export function approxAtanh(a: ApproxComplex): ApproxComplex {
+  if (approxIsReal(a) && a.re > -1 && a.re < 1) {
+    return approxComplex(Math.atanh(a.re));
+  }
+  return approxMul(
+    APPROX_HALF,
+    approxLog(approxDiv(approxAdd(APPROX_ONE, a), approxSub(APPROX_ONE, a))),
+  );
 }
 
 export type LosslessInput =
@@ -265,6 +512,29 @@ function toComplexRationalInput(value: LosslessInput): ComplexRational | Symboli
   return exactComplex(re.re, im.re);
 }
 
+function approxFromInput(value: LosslessInput): ApproxComplex | null {
+  if (typeof value === "bigint") return approxComplex(Number(value));
+  if (typeof value === "number") return approxComplex(value);
+  if (typeof value === "string") {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? approxComplex(parsed) : null;
+  }
+  if ("kind" in value) {
+    if (value.kind === "complex-rational") {
+      return losslessToApprox(value);
+    }
+    return null;
+  }
+  if ("num" in value && "den" in value) {
+    return approxComplex(rationalToNumber(value as Rational));
+  }
+  const re = approxFromInput(value.re);
+  const im = value.im === undefined ? APPROX_ZERO : approxFromInput(value.im);
+  if (!re || !im) return null;
+  if (im.im !== 0) return null;
+  return approxComplex(re.re, im.re);
+}
+
 function exactOrSymbolicBinary(
   left: LosslessValue,
   right: LosslessValue,
@@ -305,212 +575,424 @@ function exactRealPart(value: LosslessValue): Rational | null {
   return value.re;
 }
 
-export function createLosslessEvaluator(
-  env: Record<string, LosslessInput> = {},
-): (expr: Expr) => LosslessValue {
-  const memo = new WeakMap<Expr, LosslessValue>();
+interface EvaluatedNode {
+  lossless: LosslessValue;
+  approx?: ApproxComplex;
+}
 
-  const evaluateNode = (node: Expr): LosslessValue => {
+function matchEmlExp(expr: Expr): Expr | null {
+  return expr.kind === "eml" && isOne(expr.right) ? expr.left : null;
+}
+
+function matchEmlLn(expr: Expr): Expr | null {
+  if (
+    expr.kind === "eml" &&
+    isOne(expr.left) &&
+    expr.right.kind === "eml" &&
+    expr.right.left.kind === "eml" &&
+    isOne(expr.right.left.left) &&
+    isOne(expr.right.right)
+  ) {
+    return expr.right.left.right;
+  }
+  return null;
+}
+
+function matchEmlSub(expr: Expr): { left: Expr; right: Expr } | null {
+  if (expr.kind !== "eml") return null;
+  const left = matchEmlLn(expr.left);
+  const right = matchEmlExp(expr.right);
+  return left && right ? { left, right } : null;
+}
+
+function losslessNegValue(value: LosslessValue): LosslessValue {
+  return exactOrSymbolicUnary(value, complexNeg, neg);
+}
+
+function losslessAddValue(left: LosslessValue, right: LosslessValue): LosslessValue {
+  return exactOrSymbolicBinary(left, right, complexAdd, add);
+}
+
+function losslessSubValue(left: LosslessValue, right: LosslessValue): LosslessValue {
+  if (exprEqualsValue(left, right)) {
+    return exactComplex(rational(0n));
+  }
+  return exactOrSymbolicBinary(left, right, complexSub, sub);
+}
+
+function losslessMulValue(left: LosslessValue, right: LosslessValue): LosslessValue {
+  if (left.kind === "complex-rational" && right.kind === "complex-rational") {
+    return complexIsZero(left) || complexIsZero(right)
+      ? exactComplex(rational(0n))
+      : complexMul(left, right);
+  }
+  if (isExactOneValue(left)) return right;
+  if (isExactOneValue(right)) return left;
+  return exactOrSymbolicBinary(left, right, complexMul, mul);
+}
+
+function losslessDivValue(left: LosslessValue, right: LosslessValue): LosslessValue {
+  if (left.kind === "complex-rational" && right.kind === "complex-rational") {
+    if (complexIsOne(right)) return left;
+    if (complexIsZero(left) && !complexIsZero(right)) return exactComplex(rational(0n));
+    if (!complexIsZero(right) && exprEqualsValue(left, right)) return exactComplex(rational(1n));
+    return complexDiv(left, right);
+  }
+  if (isExactOneValue(right)) return left;
+  return exactOrSymbolicBinary(left, right, complexDiv, div);
+}
+
+function losslessPowValue(base: LosslessValue, exponent: LosslessValue): LosslessValue {
+  if (isExactOneValue(exponent)) return base;
+  if (isExactNonZeroValue(base) && isExactZeroValue(exponent)) {
+    return exactComplex(rational(1n));
+  }
+  if (
+    base.kind === "complex-rational" &&
+    exponent.kind === "complex-rational" &&
+    rationalIsZero(exponent.im)
+  ) {
+    if (rationalIsInteger(exponent.re)) {
+      return complexPowInteger(base, exponent.re.num);
+    }
+    if (rationalEquals(exponent.re, rational(1n, 2n))) {
+      const root = complexSqrtExact(base);
+      if (root) return root;
+    }
+  }
+  return { kind: "symbolic", expr: pow(valueToExpr(base), valueToExpr(exponent)) };
+}
+
+function losslessExpValue(value: LosslessValue): LosslessValue {
+  if (isExactZeroValue(value)) return exactComplex(rational(1n));
+  return { kind: "symbolic", expr: exp(valueToExpr(value)) };
+}
+
+function losslessLnValue(value: LosslessValue): LosslessValue {
+  if (isExactOneValue(value)) return exactComplex(rational(0n));
+  return { kind: "symbolic", expr: ln(valueToExpr(value)) };
+}
+
+function losslessSqrtValue(value: LosslessValue): LosslessValue {
+  if (value.kind === "complex-rational") {
+    return complexSqrtExact(value) ?? { kind: "symbolic", expr: sqrt(valueToExpr(value)) };
+  }
+  return { kind: "symbolic", expr: sqrt(value.expr) };
+}
+
+function losslessZeroIdentity(node: Expr): LosslessValue {
+  return { kind: "symbolic", expr: node };
+}
+
+function finalizeEvaluatedNode(
+  lossless: LosslessValue,
+  withApprox: boolean,
+  approxFallback?: () => ApproxComplex,
+): EvaluatedNode {
+  if (!withApprox) return { lossless };
+  if (lossless.kind === "complex-rational") {
+    return { lossless, approx: losslessToApprox(lossless) };
+  }
+  if (!approxFallback) {
+    throw new Error("Approximate evaluation requires numeric fallback values");
+  }
+  return { lossless, approx: approxFallback() };
+}
+
+function createEvaluatorCore(
+  env: Record<string, LosslessInput>,
+  withApprox: boolean,
+): (expr: Expr) => EvaluatedNode {
+  const memo = new WeakMap<Expr, EvaluatedNode>();
+
+  const asApprox = (value: EvaluatedNode): ApproxComplex => {
+    if (!withApprox || !value.approx) {
+      throw new Error("Approximate value requested from lossless-only evaluation");
+    }
+    return value.approx;
+  };
+
+  const evaluateNode = (node: Expr): EvaluatedNode => {
     const cached = memo.get(node);
     if (cached) return cached;
 
-    let result: LosslessValue;
+    let result: EvaluatedNode;
     switch (node.kind) {
       case "num":
-        result = exactComplex(parseRationalLiteral(node.raw));
+        result = finalizeEvaluatedNode(exactComplex(parseRationalLiteral(node.raw)), withApprox);
         break;
       case "var": {
         const value = env[node.name];
         if (value === undefined) throw new Error(`Missing variable ${node.name}`);
-        result = toComplexRationalInput(value);
+        const normalized = toComplexRationalInput(value);
+        result = finalizeEvaluatedNode(normalized, withApprox, () => {
+          const directApprox = approxFromInput(value);
+          if (directApprox) return directApprox;
+          if (
+            normalized.kind === "symbolic" &&
+            normalized.expr.kind === "var" &&
+            normalized.expr.name === node.name
+          ) {
+            throw new Error(`Variable ${node.name} does not have a numeric approximate value`);
+          }
+          return asApprox(evaluateNode(valueToExpr(normalized)));
+        });
         break;
       }
       case "const":
         result =
           node.name === "i"
-            ? exactComplex(rational(0n), rational(1n))
-            : { kind: "symbolic", expr: node };
+            ? finalizeEvaluatedNode(exactComplex(rational(0n), rational(1n)), withApprox)
+            : finalizeEvaluatedNode({ kind: "symbolic", expr: node }, withApprox, () =>
+                approxComplex(node.name === "e" ? Math.E : Math.PI),
+              );
         break;
-      case "neg":
-        result = exactOrSymbolicUnary(evaluateNode(node.value), complexNeg, neg);
-        break;
-      case "add":
-        result = exactOrSymbolicBinary(
-          evaluateNode(node.left),
-          evaluateNode(node.right),
-          complexAdd,
-          add,
+      case "neg": {
+        const value = evaluateNode(node.value);
+        result = finalizeEvaluatedNode(losslessNegValue(value.lossless), withApprox, () =>
+          approxNeg(asApprox(value)),
         );
         break;
+      }
+      case "add": {
+        const left = evaluateNode(node.left);
+        const right = evaluateNode(node.right);
+        result = finalizeEvaluatedNode(
+          losslessAddValue(left.lossless, right.lossless),
+          withApprox,
+          () => approxAdd(asApprox(left), asApprox(right)),
+        );
+        break;
+      }
       case "sub": {
         const left = evaluateNode(node.left);
         const right = evaluateNode(node.right);
-        if (
-          left.kind === "complex-rational" &&
-          right.kind === "complex-rational" &&
-          exprEqualsValue(left, right)
-        ) {
-          result = exactComplex(rational(0n));
-        } else {
-          result = exactOrSymbolicBinary(left, right, complexSub, sub);
-        }
+        result = finalizeEvaluatedNode(
+          losslessSubValue(left.lossless, right.lossless),
+          withApprox,
+          () => approxSub(asApprox(left), asApprox(right)),
+        );
         break;
       }
       case "mul": {
         const left = evaluateNode(node.left);
         const right = evaluateNode(node.right);
-        if (left.kind === "complex-rational" && right.kind === "complex-rational") {
-          result =
-            complexIsZero(left) || complexIsZero(right)
-              ? exactComplex(rational(0n))
-              : complexMul(left, right);
-        } else if (isExactOneValue(left)) {
-          result = right;
-        } else if (isExactOneValue(right)) {
-          result = left;
-        } else {
-          result = exactOrSymbolicBinary(left, right, complexMul, mul);
-        }
+        result = finalizeEvaluatedNode(
+          losslessMulValue(left.lossless, right.lossless),
+          withApprox,
+          () => approxMul(asApprox(left), asApprox(right)),
+        );
         break;
       }
       case "div": {
         const left = evaluateNode(node.left);
         const right = evaluateNode(node.right);
-        if (left.kind === "complex-rational" && right.kind === "complex-rational") {
-          if (complexIsOne(right)) {
-            result = left;
-          } else if (complexIsZero(left) && !complexIsZero(right)) {
-            result = exactComplex(rational(0n));
-          } else if (!complexIsZero(right) && exprEqualsValue(left, right)) {
-            result = exactComplex(rational(1n));
-          } else {
-            result = complexDiv(left, right);
-          }
-        } else if (isExactOneValue(right)) {
-          result = left;
-        } else {
-          result = exactOrSymbolicBinary(left, right, complexDiv, div);
-        }
+        result = finalizeEvaluatedNode(
+          losslessDivValue(left.lossless, right.lossless),
+          withApprox,
+          () => approxDiv(asApprox(left), asApprox(right)),
+        );
         break;
       }
       case "pow": {
         const base = evaluateNode(node.left);
         const exponent = evaluateNode(node.right);
-        if (isExactOneValue(exponent)) {
-          result = base;
-          break;
-        }
-        if (isExactNonZeroValue(base) && isExactZeroValue(exponent)) {
-          result = exactComplex(rational(1n));
-          break;
-        }
-        if (
-          base.kind === "complex-rational" &&
-          exponent.kind === "complex-rational" &&
-          rationalIsZero(exponent.im)
-        ) {
-          if (rationalIsInteger(exponent.re)) {
-            result = complexPowInteger(base, exponent.re.num);
-            break;
-          }
-          if (rationalEquals(exponent.re, rational(1n, 2n))) {
-            const root = complexSqrtExact(base);
-            if (root) {
-              result = root;
-              break;
-            }
-          }
-        }
-        result = { kind: "symbolic", expr: pow(valueToExpr(base), valueToExpr(exponent)) };
+        result = finalizeEvaluatedNode(
+          losslessPowValue(base.lossless, exponent.lossless),
+          withApprox,
+          () => approxPow(asApprox(base), asApprox(exponent)),
+        );
         break;
       }
       case "exp": {
         const value = evaluateNode(node.value);
-        if (isExactZeroValue(value)) {
-          result = exactComplex(rational(1n));
-          break;
-        }
-        if (node.value.kind === "ln") {
-          const inner = evaluateNode(node.value.value);
-          if (isExactNonZeroValue(inner)) {
-            result = inner;
-            break;
+        let lossless = losslessExpValue(value.lossless);
+
+        const innerExpr = node.value.kind === "ln" ? node.value.value : matchEmlLn(node.value);
+        if (innerExpr) {
+          const inner = evaluateNode(innerExpr);
+          if (isExactNonZeroValue(inner.lossless)) {
+            lossless = inner.lossless;
           }
         }
-        result = { kind: "symbolic", expr: exp(valueToExpr(value)) };
+
+        result = finalizeEvaluatedNode(lossless, withApprox, () => approxExp(asApprox(value)));
         break;
       }
       case "ln": {
         const value = evaluateNode(node.value);
-        if (isExactOneValue(value)) {
-          result = exactComplex(rational(0n));
-          break;
-        }
-        if (node.value.kind === "exp") {
-          const inner = evaluateNode(node.value.value);
-          const real = exactRealPart(inner);
+        let lossless = losslessLnValue(value.lossless);
+
+        const innerExpr = node.value.kind === "exp" ? node.value.value : matchEmlExp(node.value);
+        if (innerExpr) {
+          const inner = evaluateNode(innerExpr);
+          const real = exactRealPart(inner.lossless);
           if (real) {
-            result = exactComplex(real);
-            break;
+            lossless = exactComplex(real);
           }
         }
-        result = { kind: "symbolic", expr: ln(valueToExpr(value)) };
+
+        result = finalizeEvaluatedNode(lossless, withApprox, () => approxLog(asApprox(value)));
         break;
       }
       case "sqrt": {
         const value = evaluateNode(node.value);
-        if (value.kind === "complex-rational") {
-          const root = complexSqrtExact(value);
-          result = root ?? { kind: "symbolic", expr: sqrt(valueToExpr(value)) };
-        } else {
-          result = { kind: "symbolic", expr: sqrt(value.expr) };
-        }
+        result = finalizeEvaluatedNode(losslessSqrtValue(value.lossless), withApprox, () =>
+          approxSqrt(asApprox(value)),
+        );
         break;
       }
-      case "sin":
+      case "sin": {
+        const value = evaluateNode(node.value);
+        const lossless: LosslessValue = isExactZeroValue(value.lossless)
+          ? exactComplex(rational(0n))
+          : { kind: "symbolic", expr: { ...node, value: valueToExpr(value.lossless) } };
+        result = finalizeEvaluatedNode(lossless, withApprox, () => approxSin(asApprox(value)));
+        break;
+      }
+      case "cos": {
+        const value = evaluateNode(node.value);
+        const lossless: LosslessValue = isExactZeroValue(value.lossless)
+          ? exactComplex(rational(1n))
+          : { kind: "symbolic", expr: { ...node, value: valueToExpr(value.lossless) } };
+        result = finalizeEvaluatedNode(lossless, withApprox, () => approxCos(asApprox(value)));
+        break;
+      }
       case "tan":
+      case "cot":
+      case "sec":
+      case "csc":
       case "sinh":
+      case "cosh":
       case "tanh":
+      case "coth":
+      case "sech":
+      case "csch":
       case "asin":
+      case "acos":
       case "atan":
+      case "asec":
+      case "acsc":
+      case "acot":
       case "asinh":
+      case "acosh":
       case "atanh": {
         const value = evaluateNode(node.value);
-        result = isExactZeroValue(value)
-          ? exactComplex(rational(0n))
-          : { kind: "symbolic", expr: { ...node, value: valueToExpr(value) } };
-        break;
-      }
-      case "cos":
-      case "cosh": {
-        const value = evaluateNode(node.value);
-        result = isExactZeroValue(value)
-          ? exactComplex(rational(1n))
-          : { kind: "symbolic", expr: { ...node, value: valueToExpr(value) } };
-        break;
-      }
-      case "acos":
-      case "acosh": {
-        const value = evaluateNode(node.value);
-        result = isExactOneValue(value)
-          ? exactComplex(rational(0n))
-          : { kind: "symbolic", expr: { ...node, value: valueToExpr(value) } };
+        let lossless: LosslessValue = losslessZeroIdentity({
+          ...node,
+          value: valueToExpr(value.lossless),
+        });
+        if (
+          (node.kind === "tan" ||
+            node.kind === "sinh" ||
+            node.kind === "tanh" ||
+            node.kind === "asin" ||
+            node.kind === "atan" ||
+            node.kind === "asinh" ||
+            node.kind === "atanh") &&
+          isExactZeroValue(value.lossless)
+        ) {
+          lossless = exactComplex(rational(0n));
+        } else if (node.kind === "cosh" && isExactZeroValue(value.lossless)) {
+          lossless = exactComplex(rational(1n));
+        } else if (
+          (node.kind === "acos" || node.kind === "acosh") &&
+          isExactOneValue(value.lossless)
+        ) {
+          lossless = exactComplex(rational(0n));
+        }
+
+        result = finalizeEvaluatedNode(lossless, withApprox, () => {
+          const approx = asApprox(value);
+          switch (node.kind) {
+            case "tan":
+              return approxTan(approx);
+            case "cot":
+              return approxCot(approx);
+            case "sec":
+              return approxSec(approx);
+            case "csc":
+              return approxCsc(approx);
+            case "sinh":
+              return approxSinh(approx);
+            case "cosh":
+              return approxCosh(approx);
+            case "tanh":
+              return approxTanh(approx);
+            case "coth":
+              return approxCoth(approx);
+            case "sech":
+              return approxSech(approx);
+            case "csch":
+              return approxCsch(approx);
+            case "asin":
+              return approxAsin(approx);
+            case "acos":
+              return approxAcos(approx);
+            case "atan":
+              return approxAtan(approx);
+            case "asec":
+              return approxAsec(approx);
+            case "acsc":
+              return approxAcsc(approx);
+            case "acot":
+              return approxAcot(approx);
+            case "asinh":
+              return approxAsinh(approx);
+            case "acosh":
+              return approxAcosh(approx);
+            case "atanh":
+              return approxAtanh(approx);
+          }
+        });
         break;
       }
       case "eml": {
+        const expArg = matchEmlExp(node);
+        if (expArg) {
+          const value = evaluateNode(expArg);
+          result = finalizeEvaluatedNode(losslessExpValue(value.lossless), withApprox, () =>
+            approxExp(asApprox(value)),
+          );
+          break;
+        }
+
+        const logArg = matchEmlLn(node);
+        if (logArg) {
+          const value = evaluateNode(logArg);
+          result = finalizeEvaluatedNode(losslessLnValue(value.lossless), withApprox, () =>
+            approxLog(asApprox(value)),
+          );
+          break;
+        }
+
+        const subArgs = matchEmlSub(node);
+        if (subArgs) {
+          const left = evaluateNode(subArgs.left);
+          const right = evaluateNode(subArgs.right);
+          result = finalizeEvaluatedNode(
+            losslessSubValue(left.lossless, right.lossless),
+            withApprox,
+            () => approxSub(asApprox(left), asApprox(right)),
+          );
+          break;
+        }
+
         const left = evaluateNode(node.left);
         const right = evaluateNode(node.right);
-        result = isExactOneValue(right)
-          ? evaluateNode(exp(valueToExpr(left)))
-          : { kind: "symbolic", expr: emlExpr(valueToExpr(left), valueToExpr(right)) };
+        result = finalizeEvaluatedNode(
+          {
+            kind: "symbolic",
+            expr: emlExpr(valueToExpr(left.lossless), valueToExpr(right.lossless)),
+          },
+          withApprox,
+          () => approxSub(approxExp(asApprox(left)), approxLog(asApprox(right))),
+        );
         break;
       }
       default: {
-        const value = "value" in node ? evaluateNode(node.value) : null;
-        result = {
-          kind: "symbolic",
-          expr: value ? { ...node, value: valueToExpr(value) } : node,
-        };
+        const exhaustive: never = node;
+        throw new Error(`Unsupported expression kind: ${String(exhaustive)}`);
       }
     }
 
@@ -519,6 +1001,26 @@ export function createLosslessEvaluator(
   };
 
   return evaluateNode;
+}
+
+export function createLosslessEvaluator(
+  env: Record<string, LosslessInput> = {},
+): (expr: Expr) => LosslessValue {
+  const evaluateNode = createEvaluatorCore(env, false);
+  return (expr: Expr) => evaluateNode(expr).lossless;
+}
+
+export function createApproxEvaluator(
+  env: Record<string, LosslessInput> = {},
+): (expr: Expr) => ApproxComplex {
+  const evaluateNode = createEvaluatorCore(env, true);
+  return (expr: Expr) => {
+    const result = evaluateNode(expr);
+    if (!result.approx) {
+      throw new Error("Approximate evaluation failed to produce a numeric result");
+    }
+    return result.approx;
+  };
 }
 
 export function evaluateLossless(
