@@ -4,7 +4,7 @@ export const zhCN = {
   app: {
     title: "EML Playground",
     metaDescription:
-      "一个纯前端的 EML playground，把论文核心理论、emlib lowering 和 D2 SVG 渲染整合到同一个界面里。",
+      "一个前端 EML playground，用来查看论文、emlib lowering 和 D2 SVG 渲染。",
     languageLabel: "语言",
     localeNames: {
       "zh-CN": "中文",
@@ -20,7 +20,7 @@ export const zhCN = {
     titleLead: "EML as a",
     titleAccent: "Generative Primitive",
     description:
-      "这个页面把论文最核心的理论和 emlib 的能力压缩到同一个前端界面里：先解释为什么 eml(x, y) = exp(x) - ln(y) 值得被看成连续数学里的单一原语，再让你直接把表达式 lowering 成纯 EML，并渲染成 SVG 结构图。",
+      "这个页面做三件事：给出论文里的核心构造，用 emlib 把标准表达式 lowering 成纯 EML，再把结果画成 SVG 结构图。",
     paperNote: {
       label: "原论文",
       title: "All elementary functions from a single binary operator",
@@ -41,12 +41,12 @@ export const zhCN = {
       {
         label: "意义所在",
         value: "Search Space",
-        description: "适合符号回归、编译和可视化。",
+        description: "方便做符号回归、编译和 AI。",
       },
     ],
     pipeline: {
       eyebrow: "Lowering Pipeline",
-      title: "Theory to Interface",
+      title: "Paper to Playground",
       badge: "docs + emlib",
       steps: [
         {
@@ -66,67 +66,74 @@ export const zhCN = {
   },
   highlights: [
     {
-      title: "连续数学里的单一原语",
-      text: "论文把 eml(x, y) = exp(x) - ln(y) 类比成连续世界的 NAND，用一个二元算子覆盖大量初等函数。",
+      title: "一个算子，覆盖多类函数",
+      text: "论文讨论的是：是否能只靠 eml(x, y) = exp(x) - ln(y) 这个二元节点，恢复一大类初等函数。",
     },
     {
-      title: "统一语法 = 统一搜索空间",
-      text: "所有表达式都可以压成 S -> 1 | eml(S, S)，于是复杂函数族被规整成同构的满二叉树。",
+      title: "统一语法，统一树形",
+      text: "所有表达式都可以压成 S -> 1 | eml(S, S)，原本混杂的语法会收敛到同一种递归树结构。",
     },
     {
-      title: "复数中间过程不是副作用",
-      text: "三角函数、pi、i 与分支行为都依赖复数主支；这不是实现噪声，而是表达能力的来源。",
+      title: "复数语义必须算清楚",
+      text: "三角函数、pi、i 和分支行为都依赖复数主支，所以 evaluator 必须把这部分语义直接算进去。",
     },
   ],
   summary: {
     paper: {
       title: "论文核心内容",
       description:
-        "页面只保留论文里最关键的三层叙事：单一原语的存在性、统一语法的表示论价值，以及复数中间过程对完备性的必要性。",
+        "页面只保留和实现直接相关的部分：算子本身、统一语法，以及让构造成立的复数语义。",
       formulaLabel: "核心公式",
       formulaDescription:
-        "论文不是把 exp 和 ln 生硬拼接，而是主张它们可以被内嵌进一个可重复复制的统一节点里。",
+        "关键点在结构上：exp 和 ln 可以被包进同一个可重复节点，然后在整棵表达式树里反复使用。",
       points: [
         {
-          title: "1. 连续世界里的 “NAND”",
-          text: "论文要找的是数学里的 Sheffer primitive。重点不在于某条公式漂亮，而在于“一个二元节点反复复制”是否足以恢复常见初等函数基底。",
+          title: "1. 一个二元基底",
+          text: "论文要找的是初等函数上的 Sheffer-style primitive。判断标准很直接：一个二元节点反复复制后，能不能把常见函数基底重新长出来。",
         },
         {
-          title: "2. 统一结构比更短的写法更重要",
-          text: "纯 EML 表达式通常并不短，但它把复杂 grammar 压成单一树形，因此更适合编译、搜索、符号回归和硬件映射。",
+          title: "2. 结构比记号更重要",
+          text: "纯 EML 表达式通常不会更短，但它把混合 grammar 收成一种树形，这对编译、搜索、符号回归和硬件映射更有价值。",
         },
         {
-          title: "3. 复数与主支不是实现细节",
-          text: "三角函数、pi 和 i 的恢复依赖复数对数和 branch choice，所以 playground 也把数值校验建立在复数语义之上。",
+          title: "3. 复数主支是模型的一部分",
+          text: "三角函数、pi 和 i 的恢复依赖复数对数和 branch choice，所以 playground 的数值校验也建立在复数语义上。",
         },
       ],
     },
     emlib: {
-      title: "emlib 可视化能力",
+      title: "emlib 的功能",
       description:
-        "这里展示的不是静态宣传，而是页面真实调用到的库能力：解析、lowering、数值校验与 D2 结构图导出。",
+        "下面这些卡片，对应 packages/emlib 的主要 API。",
       capabilities: [
         {
-          title: "Parse / AST",
-          text: "把标准初等表达式解析成结构化 AST，作为 lowering、分析和渲染的统一入口。",
+          title: "Parse / Analyze",
+          text: "构建并检查表达式树。",
+          detail: "parse, analyzeExpr",
+          useCase: "适合做结构检查、复杂度统计和前置分析。",
         },
         {
-          title: "Reduce To Pure EML",
-          text: "把表达式收敛到只包含 1 和 eml(...) 的核心表示，直接对应论文最关键的统一语法。",
+          title: "Lower / Rewrite",
+          text: "压到纯 EML，或继续找更短写法。",
+          detail:
+            "reduceTypes, toPureEml, reduceTokens, simplifyToElementary, compressPureEml",
+          useCase: "适合做统一表示、搜索压缩和 token 优化。",
         },
         {
-          title: "Evaluate & Verify",
-          text: "分别求标准表达式和纯 EML 表达式的值，并在线检查 lowering 前后的数值一致性。",
+          title: "Evaluate / Export",
+          text: "做数值校验，并导出 SVG 用的树。",
+          detail: "evaluateLossless, evaluate, exprToD2",
+          useCase: "适合做等价验证、调试和可视化展示。",
         },
       ],
     },
   },
   playground: {
-    eyebrow: "交互式 Reduction Studio",
+    eyebrow: "Expression Playground",
     badge: "解析 · lowering · 校验 · 渲染",
     title: "在线 Playground",
     description:
-      "输入一个标准表达式，页面会实时完成 parsing、pure EML lowering、复杂度分析、数值一致性校验，并把结构导出为 D2 SVG。",
+      "输入表达式后，页面会解析它、把它 lowering 成纯 EML、做数值比对，并导出 D2 SVG 结构图。",
     samples: [
       { label: "核心算子", expr: "exp(x) - ln(y)" },
       { label: "对数展开", expr: "ln(x)" },
@@ -155,8 +162,8 @@ export const zhCN = {
     metrics: {
       standardTitle: "Standard",
       pureTitle: "Pure EML",
-      tokenNodeLabel: "tokens / nodes",
-      operatorTypeLabel: "operator types",
+      tokenNodeLabel: "nodes",
+      operatorTypeLabel: "operator(s)",
     },
     lowering: {
       title: "Lowering Result",

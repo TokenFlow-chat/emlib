@@ -69,6 +69,7 @@ body {
     /* 性能：防止布局抖动 */
     min-height: 100vh;
     text-rendering: optimizeSpeed;
+    text-autospace: normal;
 }
 
 /* 2. 性能与响应式图片 */

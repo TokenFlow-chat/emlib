@@ -22,7 +22,7 @@ export const baseMessages = {
   app: {
     title: "EML Playground",
     metaDescription:
-      "A pure frontend EML playground that brings the paper's core theory, emlib lowering, and D2 SVG rendering into one interface.",
+      "A frontend EML playground for the paper, emlib lowering, and D2 SVG rendering.",
     languageLabel: "Language",
     localeNames: {
       "zh-CN": "Chinese",
@@ -38,7 +38,7 @@ export const baseMessages = {
     titleLead: "EML as a",
     titleAccent: "Generative Primitive",
     description:
-      "This page compresses the paper's core ideas and emlib's capabilities into one frontend interface: it explains why eml(x, y) = exp(x) - ln(y) can be treated as a single primitive in continuous math, then lets you lower expressions into pure EML and render them as SVG structure diagrams.",
+      "This page does three things: summarize the paper's core construction, lower standard expressions into pure EML with emlib, and render the result as an SVG tree.",
     paperNote: {
       label: "Original paper",
       title: "All elementary functions from a single binary operator",
@@ -61,12 +61,12 @@ export const baseMessages = {
         label: "Why It Matters",
         value: "Search Space",
         description:
-          "Better suited to symbolic regression, compilation, and visualization.",
+          "Useful for symbolic regression, compilation, and symbolic AI.",
       },
     ],
     pipeline: {
       eyebrow: "Lowering Pipeline",
-      title: "Theory to Interface",
+      title: "Paper to Playground",
       badge: "docs + emlib",
       steps: [
         {
@@ -86,68 +86,74 @@ export const baseMessages = {
   },
   highlights: [
     {
-      title: "A Single Primitive for Continuous Math",
-      text: "The paper treats eml(x, y) = exp(x) - ln(y) as the NAND of the continuous world: one binary operator can recover a large set of elementary functions.",
+      title: "One Operator, Many Functions",
+      text: "The paper shows how eml(x, y) = exp(x) - ln(y) can serve as a single binary basis for a broad class of elementary functions.",
     },
     {
-      title: "Unified Grammar = Unified Search Space",
-      text: "Every expression can be lowered into S -> 1 | eml(S, S), turning a diverse function family into isomorphic full binary trees.",
+      title: "One Grammar, One Tree Shape",
+      text: "Every expression can be lowered into S -> 1 | eml(S, S), so the language collapses into one recursive tree form.",
     },
     {
-      title: "Complex Intermediate States Are the Point",
-      text: "Trigonometric functions, pi, i, and branch behavior rely on the principal branch over complex numbers; that is a source of expressiveness, not a side effect.",
+      title: "Complex Semantics Matter",
+      text: "Trigonometric functions, pi, i, and branch behavior depend on the principal branch over complex numbers, so the evaluator has to model that directly.",
     },
   ],
   summary: {
     paper: {
       title: "Paper Highlights",
       description:
-        "The page keeps only the three most important threads from the paper: the existence of a single primitive, the representational value of a unified grammar, and the necessity of complex intermediate states for completeness.",
+        "This page keeps the parts that matter in practice: the operator, the grammar, and the complex-valued semantics needed to make the construction work.",
       formulaLabel: "Core Formula",
       formulaDescription:
-        "The paper does not merely glue exp and ln together. It argues that both can live inside one repeatable node that can be copied across a full expression tree.",
+        "The key claim is structural: exp and ln can be packaged into one repeatable node and reused across the whole expression tree.",
       points: [
         {
-          title: "1. A continuous-world NAND",
-          text: "The real target is a Sheffer primitive for mathematics. The question is not whether one formula looks elegant, but whether repeatedly cloning one binary node can recover a familiar elementary-function basis.",
+          title: "1. One binary basis",
+          text: "The target is a Sheffer-style primitive for elementary functions. The test is simple: can one binary node be copied until the usual basis comes back.",
         },
         {
-          title: "2. Unified structure matters more than shorter syntax",
-          text: "Pure EML expressions are often not shorter, but they collapse a complex grammar into one tree form, which makes them a better substrate for compilation, search, symbolic regression, and hardware mapping.",
+          title: "2. Structure beats notation",
+          text: "Pure EML expressions are often longer, but they replace a mixed grammar with one tree form. That helps compilation, search, symbolic regression, and hardware mapping.",
         },
         {
-          title:
-            "3. Complex numbers and principal branches are not implementation details",
-          text: "Recovering trigonometric functions, pi, and i depends on complex logarithms and branch choices, so the playground also verifies numerical consistency with complex-valued semantics.",
+          title: "3. Complex branches are part of the model",
+          text: "Recovering trigonometric functions, pi, and i depends on complex logarithms and branch choices, so verification has to run with complex-valued semantics.",
         },
       ],
     },
     emlib: {
-      title: "emlib in the UI",
+      title: "What emlib does",
       description:
-        "This is not a static marketing mock. The page calls the real library features used here: parsing, lowering, numeric verification, and D2 structure export.",
+        "These cards map to the main APIs in packages/emlib.",
       capabilities: [
         {
-          title: "Parse / AST",
-          text: "Parse a standard elementary expression into a structured AST that becomes the common entry point for lowering, analysis, and rendering.",
+          title: "Parse / Analyze",
+          text: "Build and inspect the expression tree.",
+          detail: "parse, analyzeExpr",
+          useCase: "Good for structure checks, complexity stats, and front-end analysis.",
         },
         {
-          title: "Reduce To Pure EML",
-          text: "Converge the expression into a core form that contains only 1 and eml(...), matching the paper's most important unified grammar.",
+          title: "Lower / Rewrite",
+          text: "Lower to pure EML or search for shorter forms.",
+          detail:
+            "reduceTypes, toPureEml, reduceTokens, simplifyToElementary, compressPureEml",
+          useCase: "Good for canonical forms, search compression, and token reduction.",
         },
         {
-          title: "Evaluate & Verify",
-          text: "Evaluate the standard expression and the pure EML expression separately, then verify their numeric consistency online.",
+          title: "Evaluate / Export",
+          text: "Check values and export the tree for SVG.",
+          detail: "evaluateLossless, evaluate, exprToD2",
+          useCase: "Good for equivalence checks, debugging, and visualization.",
         },
       ],
     },
   },
   playground: {
-    eyebrow: "Interactive Reduction Studio",
+    eyebrow: "Expression Playground",
     badge: "parse · lower · verify · render",
     title: "Interactive Playground",
     description:
-      "Enter a standard expression and the page will parse it, lower it into pure EML, analyze its complexity, verify numeric consistency, and export the structure as D2 SVG in real time.",
+      "Enter an expression and the page will parse it, lower it into pure EML, compare the two forms numerically, and render the structure as D2 SVG.",
     samples: [
       { label: "Core operator", expr: "exp(x) - ln(y)" },
       { label: "Log expansion", expr: "ln(x)" },
@@ -177,8 +183,8 @@ export const baseMessages = {
     metrics: {
       standardTitle: "Standard",
       pureTitle: "Pure EML",
-      tokenNodeLabel: "tokens / nodes",
-      operatorTypeLabel: "operator types",
+      tokenNodeLabel: "nodes",
+      operatorTypeLabel: "operator(s)",
     },
     lowering: {
       title: "Lowering Result",

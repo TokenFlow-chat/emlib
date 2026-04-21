@@ -61,7 +61,7 @@ export default function SummaryPanels() {
             {messages.summary.emlib.description}
           </CardDescription>
         </CardHeader>
-        <CardContent className="grid gap-3 md:grid-cols-3">
+        <CardContent className="grid gap-3">
           {messages.summary.emlib.capabilities.map((capability, index) => {
             const Icon = emlibCapabilities[index]!.icon;
 
@@ -70,15 +70,21 @@ export default function SummaryPanels() {
                 key={capability.title}
                 className="min-w-0 rounded-[0.95rem] border border-[color:var(--line)] bg-white/78 p-5"
               >
-                <div className="flex size-10 items-center justify-center rounded-[0.8rem] bg-[color:var(--accent-soft)] text-[color:var(--accent-strong)]">
-                  <Icon className="size-5" />
-                </div>
-                <div className="mt-4 font-semibold text-[color:var(--ink)]">
+                <div className="flex gap-2 items-center font-semibold text-[color:var(--ink)]">
+                  <div className="flex size-10 items-center justify-center rounded-[0.8rem] bg-[color:var(--accent-soft)] text-[color:var(--accent-strong)]">
+                    <Icon className="size-5" />
+                  </div>
                   {capability.title}
                 </div>
                 <p className="mt-2 text-sm leading-6 text-[color:var(--ink-soft)]">
                   {capability.text}
                 </p>
+                <div className="mt-3 text-xs leading-5 text-[color:var(--ink-soft)]/80">
+                  {capability.detail}
+                </div>
+                <div className="mt-2 text-xs leading-5 text-[color:var(--ink-soft)]/70">
+                  {capability.useCase}
+                </div>
               </div>
             );
           })}
