@@ -23,6 +23,39 @@ test("lower exp(x) to the paper core EML form and simplify it back", () => {
   expect(toString(simplified)).toBe("exp(x)");
 });
 
+test("simplifyToElementary round-trips the extended elementary family from pure EML", () => {
+  const samples = [
+    "sin(x)",
+    "cos(x)",
+    "tan(x)",
+    "cot(x)",
+    "sec(x)",
+    "csc(x)",
+    "sinh(x)",
+    "cosh(x)",
+    "tanh(x)",
+    "coth(x)",
+    "sech(x)",
+    "csch(x)",
+    "asin(x)",
+    "acos(x)",
+    "atan(x)",
+    "asec(x)",
+    "acsc(x)",
+    "acot(x)",
+    "asinh(x)",
+    "acosh(x)",
+    "atanh(x)",
+    "sqrt(x)",
+    "i",
+    "pi",
+  ];
+
+  for (const sample of samples) {
+    expect(toString(simplifyToElementary(toPureEml(parse(sample))))).toBe(sample);
+  }
+});
+
 test("parse and print the extended elementary family", () => {
   const samples = [
     "tan(x)",

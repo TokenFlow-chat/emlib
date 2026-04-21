@@ -2,6 +2,7 @@ import type { Expr } from "./ast";
 import { exprEquals, isNumericValue, num } from "./ast";
 import { countTokens, countTypes } from "./analyze";
 import { reduceTypes } from "./lower";
+import { evaluateLossless, valueToExpr } from "./numeric";
 import { parse } from "./parser";
 import { toString } from "./print";
 
@@ -20,15 +21,184 @@ function sameValue(a: Expr, b: Expr): boolean {
   return exprEquals(a, b);
 }
 
-const PLACEHOLDER_PREFIX = "__hole_";
-const SHORT_NEG_PATTERN = parse("E(E(1,E(1,E(1,E(E(1,1),1)))),E(__hole_x,1))");
-const SHORT_INV_PATTERN = parse("E(E(E(1,E(1,E(1,E(E(1,1),1)))),__hole_x),1)");
-const SHORT_MUL_PATTERN = parse(
-  "E(E(1,E(E(E(1,E(E(1,E(1,__hole_x)),1)),E(1,E(E(1,E(__hole_y,1)),1))),1)),1)",
-);
+const PLACEHOLDER_PREFIX = "_";
+const SHORT_NEG_PATTERN = parse("E(E(1,E(1,E(1,E(E(1,1),1)))),E(_x,1))");
+const SHORT_INV_PATTERN = parse("E(E(E(1,E(1,E(1,E(E(1,1),1)))),_x),1)");
+const SHORT_MUL_PATTERN = parse("E(E(1,E(E(E(1,E(E(1,E(1,_x)),1)),E(1,E(E(1,E(_y,1)),1))),1)),1)");
 const SHORT_DIV_PATTERN = parse(
-  "E(E(1,E(E(E(1,E(E(1,E(1,__hole_x)),1)),E(1,E(E(1,E(E(E(E(1,E(1,E(1,E(E(1,1),1)))),__hole_y),1),1)),1))),1)),1)",
+  "E(E(1,E(E(E(1,E(E(1,E(1,_x)),1)),E(1,E(E(1,E(E(E(E(1,E(1,E(1,E(E(1,1),1)))),_y),1),1)),1))),1)),1)",
 );
+
+type PatternBindings = Record<string, Expr>;
+type PatternBuilder = (bindings: PatternBindings, recurse: (expr: Expr) => Expr) => Expr;
+
+interface ExactPurePattern {
+  name: string;
+  pattern: Expr;
+  build: PatternBuilder;
+}
+
+const EXACT_NUMERIC_LIMIT = 32;
+const EXACT_RATIONAL_DEN_LIMIT = 16;
+const EXACT_RATIONAL_NUM_LIMIT = 16;
+const UNARY_PATTERN_KINDS = [
+  "exp",
+  "ln",
+  "sqrt",
+  "sin",
+  "cos",
+  "tan",
+  "cot",
+  "sec",
+  "csc",
+  "sinh",
+  "cosh",
+  "tanh",
+  "coth",
+  "sech",
+  "csch",
+  "asin",
+  "acos",
+  "atan",
+  "asec",
+  "acsc",
+  "acot",
+  "asinh",
+  "acosh",
+  "atanh",
+] as const;
+const BINARY_PATTERN_BUILDERS = [
+  {
+    source: "-_x",
+    build(bindings: PatternBindings, recurse: (expr: Expr) => Expr): Expr {
+      return { kind: "neg", value: recurse(bindings._x!) };
+    },
+  },
+  {
+    source: "_x+_y",
+    build(bindings: PatternBindings, recurse: (expr: Expr) => Expr): Expr {
+      return { kind: "add", left: recurse(bindings._x!), right: recurse(bindings._y!) };
+    },
+  },
+  {
+    source: "_x-_y",
+    build(bindings: PatternBindings, recurse: (expr: Expr) => Expr): Expr {
+      return { kind: "sub", left: recurse(bindings._x!), right: recurse(bindings._y!) };
+    },
+  },
+  {
+    source: "_x*_y",
+    build(bindings: PatternBindings, recurse: (expr: Expr) => Expr): Expr {
+      return { kind: "mul", left: recurse(bindings._x!), right: recurse(bindings._y!) };
+    },
+  },
+  {
+    source: "_x/_y",
+    build(bindings: PatternBindings, recurse: (expr: Expr) => Expr): Expr {
+      return { kind: "div", left: recurse(bindings._x!), right: recurse(bindings._y!) };
+    },
+  },
+  {
+    source: "_x^_y",
+    build(bindings: PatternBindings, recurse: (expr: Expr) => Expr): Expr {
+      return { kind: "pow", left: recurse(bindings._x!), right: recurse(bindings._y!) };
+    },
+  },
+] as const;
+
+let exactPureLiteralMap: Map<string, Expr> | null = null;
+let exactPurePatterns: ExactPurePattern[] | null = null;
+let earlyPureLiftRules: RewriteRule[] | null = null;
+const exactPureLiftCache = new WeakMap<Expr, Expr>();
+const exactFoldCache = new WeakMap<Expr, Expr>();
+
+function smallIntGcd(a: number, b: number): number {
+  let x = Math.abs(a);
+  let y = Math.abs(b);
+  while (y !== 0) {
+    const next = x % y;
+    x = y;
+    y = next;
+  }
+  return x || 1;
+}
+
+function exactPureLiteralSources(): string[] {
+  const out = new Set<string>(["0", "e", "i", "pi"]);
+  for (let n = -EXACT_NUMERIC_LIMIT; n <= EXACT_NUMERIC_LIMIT; n += 1) {
+    out.add(String(n));
+  }
+  for (let den = 2; den <= EXACT_RATIONAL_DEN_LIMIT; den += 1) {
+    for (let numer = -EXACT_RATIONAL_NUM_LIMIT; numer <= EXACT_RATIONAL_NUM_LIMIT; numer += 1) {
+      if (numer === 0 || smallIntGcd(numer, den) !== 1) continue;
+      out.add(`${numer}/${den}`);
+    }
+  }
+  return [...out];
+}
+
+function getExactPureLiteralMap(): Map<string, Expr> {
+  if (exactPureLiteralMap) return exactPureLiteralMap;
+
+  const map = new Map<string, Expr>();
+  for (const source of exactPureLiteralSources()) {
+    const lowered = reduceTypes(parse(source));
+    const loweredKey = exprKey(lowered);
+    const previous = map.get(loweredKey);
+    const replacement = parse(source);
+    if (!previous || compareReadable(replacement, previous) < 0) {
+      map.set(loweredKey, replacement);
+    }
+  }
+
+  exactPureLiteralMap = map;
+  return map;
+}
+
+function makeUnaryBuilder(kind: (typeof UNARY_PATTERN_KINDS)[number]): PatternBuilder {
+  return (bindings, recurse) => ({ kind, value: recurse(bindings._x!) }) as Expr;
+}
+
+function getExactPurePatterns(): ExactPurePattern[] {
+  if (exactPurePatterns) return exactPurePatterns;
+
+  const patterns: ExactPurePattern[] = [];
+  for (const kind of UNARY_PATTERN_KINDS) {
+    patterns.push({
+      name: `pure-${kind}`,
+      pattern: reduceTypes(parse(`${kind}(_x)`)),
+      build: makeUnaryBuilder(kind),
+    });
+  }
+  for (const { source, build } of BINARY_PATTERN_BUILDERS) {
+    patterns.push({
+      name: `pure-${source}`,
+      pattern: reduceTypes(parse(source)),
+      build,
+    });
+  }
+
+  patterns.sort(
+    (a, b) => countTokens(b.pattern) - countTokens(a.pattern) || b.name.length - a.name.length || 0,
+  );
+
+  exactPurePatterns = patterns;
+  return patterns;
+}
+
+function getEarlyPureLiftRules(): RewriteRule[] {
+  if (earlyPureLiftRules) return earlyPureLiftRules;
+
+  const names = new Set([
+    "fold-basic",
+    "eml-short-neg",
+    "eml-short-inv",
+    "eml-short-mul",
+    "eml-short-div",
+  ]);
+  earlyPureLiftRules = coreRewriteRules.filter((rule) => names.has(rule.name));
+  return earlyPureLiftRules;
+}
 
 function isPlaceholder(pattern: Expr): boolean {
   return pattern.kind === "var" && pattern.name.startsWith(PLACEHOLDER_PREFIX);
@@ -103,6 +273,229 @@ function matchPattern(
   }
 }
 
+function containsVariable(expr: Expr): boolean {
+  switch (expr.kind) {
+    case "var":
+      return true;
+    case "eml":
+    case "add":
+    case "sub":
+    case "mul":
+    case "div":
+    case "pow":
+      return containsVariable(expr.left) || containsVariable(expr.right);
+    case "neg":
+    case "exp":
+    case "ln":
+    case "sqrt":
+    case "sin":
+    case "cos":
+    case "tan":
+    case "cot":
+    case "sec":
+    case "csc":
+    case "sinh":
+    case "cosh":
+    case "tanh":
+    case "coth":
+    case "sech":
+    case "csch":
+    case "asin":
+    case "acos":
+    case "atan":
+    case "asec":
+    case "acsc":
+    case "acot":
+    case "asinh":
+    case "acosh":
+    case "atanh":
+      return containsVariable(expr.value);
+    default:
+      return false;
+  }
+}
+
+function containsEml(expr: Expr): boolean {
+  switch (expr.kind) {
+    case "eml":
+      return true;
+    case "add":
+    case "sub":
+    case "mul":
+    case "div":
+    case "pow":
+      return containsEml(expr.left) || containsEml(expr.right);
+    case "neg":
+    case "exp":
+    case "ln":
+    case "sqrt":
+    case "sin":
+    case "cos":
+    case "tan":
+    case "cot":
+    case "sec":
+    case "csc":
+    case "sinh":
+    case "cosh":
+    case "tanh":
+    case "coth":
+    case "sech":
+    case "csch":
+    case "asin":
+    case "acos":
+    case "atan":
+    case "asec":
+    case "acsc":
+    case "acot":
+    case "asinh":
+    case "acosh":
+    case "atanh":
+      return containsEml(expr.value);
+    default:
+      return false;
+  }
+}
+
+function liftExactPureForms(expr: Expr): Expr {
+  const cached = exactPureLiftCache.get(expr);
+  if (cached) return cached;
+
+  const ruleLift = applyRules(expr, getEarlyPureLiftRules());
+  if (compareReadable(ruleLift, expr) < 0 && !containsEml(ruleLift)) {
+    const lifted = liftExactPureForms(ruleLift);
+    exactPureLiftCache.set(expr, lifted);
+    return lifted;
+  }
+
+  const directLiteral = getExactPureLiteralMap().get(exprKey(expr));
+  if (directLiteral) {
+    exactPureLiftCache.set(expr, directLiteral);
+    return directLiteral;
+  }
+
+  for (const pattern of getExactPurePatterns()) {
+    const bindings = matchPattern(pattern.pattern, expr);
+    if (bindings) {
+      const lifted = pattern.build(bindings, liftExactPureForms);
+      exactPureLiftCache.set(expr, lifted);
+      return lifted;
+    }
+  }
+
+  let rebuilt = expr;
+  switch (expr.kind) {
+    case "eml":
+    case "add":
+    case "sub":
+    case "mul":
+    case "div":
+    case "pow":
+      rebuilt = {
+        ...expr,
+        left: liftExactPureForms(expr.left),
+        right: liftExactPureForms(expr.right),
+      };
+      break;
+    case "neg":
+    case "exp":
+    case "ln":
+    case "sqrt":
+    case "sin":
+    case "cos":
+    case "tan":
+    case "cot":
+    case "sec":
+    case "csc":
+    case "sinh":
+    case "cosh":
+    case "tanh":
+    case "coth":
+    case "sech":
+    case "csch":
+    case "asin":
+    case "acos":
+    case "atan":
+    case "asec":
+    case "acsc":
+    case "acot":
+    case "asinh":
+    case "acosh":
+    case "atanh":
+      rebuilt = { ...expr, value: liftExactPureForms(expr.value) };
+      break;
+    default:
+      break;
+  }
+
+  const normalized = applyRules(rebuilt, coreRewriteRules);
+  const lifted = compareReadable(normalized, rebuilt) < 0 ? normalized : rebuilt;
+  exactPureLiftCache.set(expr, lifted);
+  return lifted;
+}
+
+function foldExactSubexpressions(expr: Expr): Expr {
+  const cached = exactFoldCache.get(expr);
+  if (cached) return cached;
+
+  let rebuilt = expr;
+  switch (expr.kind) {
+    case "eml":
+    case "add":
+    case "sub":
+    case "mul":
+    case "div":
+    case "pow":
+      rebuilt = {
+        ...expr,
+        left: foldExactSubexpressions(expr.left),
+        right: foldExactSubexpressions(expr.right),
+      };
+      break;
+    case "neg":
+    case "exp":
+    case "ln":
+    case "sqrt":
+    case "sin":
+    case "cos":
+    case "tan":
+    case "cot":
+    case "sec":
+    case "csc":
+    case "sinh":
+    case "cosh":
+    case "tanh":
+    case "coth":
+    case "sech":
+    case "csch":
+    case "asin":
+    case "acos":
+    case "atan":
+    case "asec":
+    case "acsc":
+    case "acot":
+    case "asinh":
+    case "acosh":
+    case "atanh":
+      rebuilt = { ...expr, value: foldExactSubexpressions(expr.value) };
+      break;
+    default:
+      break;
+  }
+
+  let folded = rebuilt;
+  if (!containsVariable(rebuilt)) {
+    const exactValue = valueToExpr(evaluateLossless(rebuilt));
+    if (compareReadable(exactValue, rebuilt) <= 0) {
+      folded = exactValue;
+    }
+  }
+
+  const normalized = applyRules(folded, coreRewriteRules);
+  const result = compareReadable(normalized, folded) < 0 ? normalized : folded;
+  exactFoldCache.set(expr, result);
+  return result;
+}
+
 export const coreRewriteRules: RewriteRule[] = [
   {
     name: "fold-basic",
@@ -172,7 +565,7 @@ export const coreRewriteRules: RewriteRule[] = [
     name: "eml-short-neg",
     apply(expr) {
       const match = matchPattern(SHORT_NEG_PATTERN, expr);
-      const x = match?.__hole_x;
+      const x = match?._x;
       return x ? [{ kind: "neg", value: x }] : [];
     },
   },
@@ -180,7 +573,7 @@ export const coreRewriteRules: RewriteRule[] = [
     name: "eml-short-inv",
     apply(expr) {
       const match = matchPattern(SHORT_INV_PATTERN, expr);
-      const x = match?.__hole_x;
+      const x = match?._x;
       return x ? [{ kind: "div", left: num(1), right: x }] : [];
     },
   },
@@ -188,8 +581,8 @@ export const coreRewriteRules: RewriteRule[] = [
     name: "eml-short-mul",
     apply(expr) {
       const match = matchPattern(SHORT_MUL_PATTERN, expr);
-      const x = match?.__hole_x;
-      const y = match?.__hole_y;
+      const x = match?._x;
+      const y = match?._y;
       return x && y ? [{ kind: "mul", left: x, right: y }] : [];
     },
   },
@@ -197,8 +590,8 @@ export const coreRewriteRules: RewriteRule[] = [
     name: "eml-short-div",
     apply(expr) {
       const match = matchPattern(SHORT_DIV_PATTERN, expr);
-      const x = match?.__hole_x;
-      const y = match?.__hole_y;
+      const x = match?._x;
+      const y = match?._y;
       return x && y ? [{ kind: "div", left: x, right: y }] : [];
     },
   },
@@ -644,5 +1037,9 @@ export function reduceTokens(root: Expr, options: SearchOptions = {}): Expr {
 }
 
 export function simplifyToElementary(root: Expr, options: SearchOptions = {}): Expr {
-  return reduceTokens(root, options);
+  const rules = options.rules ?? coreRewriteRules;
+  const lifted = foldExactSubexpressions(liftExactPureForms(root));
+  const optimized = optimize(lifted, { ...options, rules });
+  const polished = foldExactSubexpressions(liftExactPureForms(optimized));
+  return canonicalizeReadable(polished, rules);
 }
