@@ -354,16 +354,18 @@ function lowerNumber(raw: string): Expr {
 function lowerConst(name: "e" | "pi" | "i"): Expr {
   if (name === "e") {
     return emlExp(ONE);
-  }
-  if (name === "i") {
+  } else if (name === "i") {
     iCache ??= emlExp(emlDiv(emlLn(emlNegativeOne()), emlTwo()));
     return iCache;
+  } else if (name === "pi") {
+    piCache ??= chooseShortest(
+      emlNeg(emlMul(lowerConst("i"), emlLn(emlNegativeOne()))),
+      emlDiv(emlLn(emlNegativeOne()), lowerConst("i")),
+    );
+    return piCache;
+  } else {
+    throw new Error(`Unknown constant: ${name}`);
   }
-  piCache ??= chooseShortest(
-    emlNeg(emlMul(lowerConst("i"), emlLn(emlNegativeOne()))),
-    emlDiv(emlLn(emlNegativeOne()), lowerConst("i")),
-  );
-  return piCache;
 }
 
 function isZeroExpr(expr: Expr): boolean {

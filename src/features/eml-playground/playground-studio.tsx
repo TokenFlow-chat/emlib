@@ -144,9 +144,10 @@ export function PlaygroundStudio() {
     layoutMode,
   });
 
-  const consistencyDelta = analysisState.ok
-    ? metricDelta(analysisState.standardValue, analysisState.pureValue)
-    : Number.NaN;
+  const consistencyDelta =
+    analysisState.ok && analysisState.evaluationOk
+      ? metricDelta(analysisState.standardValue, analysisState.pureValue)
+      : Number.NaN;
 
   const handleCopyD2 = async () => {
     if (!diagramPayload.d2Source) return;
@@ -350,32 +351,40 @@ export function PlaygroundStudio() {
                   <div className="text-xs font-semibold tracking-[0.14em] text-[color:var(--ink-soft)] uppercase">
                     {messages.playground.numericCheck.title}
                   </div>
-                  <div className="mt-3 grid gap-3 md:grid-cols-3">
-                    <div>
-                      <div className="text-sm text-[color:var(--ink-soft)]">
-                        {messages.playground.numericCheck.standardValueLabel}
+                  {analysisState.evaluationOk ? (
+                    <div className="mt-3 grid gap-3 md:grid-cols-3">
+                      <div>
+                        <div className="text-sm text-[color:var(--ink-soft)]">
+                          {messages.playground.numericCheck.standardValueLabel}
+                        </div>
+                        <div className="mt-2 font-mono text-sm leading-6 text-[color:var(--ink)]">
+                          {formatComplex(analysisState.standardValue)}
+                        </div>
                       </div>
-                      <div className="mt-2 font-mono text-sm leading-6 text-[color:var(--ink)]">
-                        {formatComplex(analysisState.standardValue)}
+                      <div>
+                        <div className="text-sm text-[color:var(--ink-soft)]">
+                          {messages.playground.numericCheck.pureValueLabel}
+                        </div>
+                        <div className="mt-2 font-mono text-sm leading-6 text-[color:var(--ink)]">
+                          {formatComplex(analysisState.pureValue)}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-sm text-[color:var(--ink-soft)]">
+                          {messages.playground.numericCheck.deltaLabel}
+                        </div>
+                        <div className="mt-2 font-mono text-sm leading-6 text-[color:var(--ink)]">
+                          {consistencyDelta.toExponential(3)}
+                        </div>
                       </div>
                     </div>
-                    <div>
-                      <div className="text-sm text-[color:var(--ink-soft)]">
-                        {messages.playground.numericCheck.pureValueLabel}
-                      </div>
-                      <div className="mt-2 font-mono text-sm leading-6 text-[color:var(--ink)]">
-                        {formatComplex(analysisState.pureValue)}
-                      </div>
+                  ) : (
+                    <div className="mt-3 rounded-[0.8rem] border border-[color:var(--warning-line)] bg-[color:var(--warning-bg)] p-4 text-sm leading-6 text-[color:var(--warning-ink)]">
+                      {messages.playground.numericCheck.evaluationError({
+                        detail: analysisState.evaluationError,
+                      })}
                     </div>
-                    <div>
-                      <div className="text-sm text-[color:var(--ink-soft)]">
-                        {messages.playground.numericCheck.deltaLabel}
-                      </div>
-                      <div className="mt-2 font-mono text-sm leading-6 text-[color:var(--ink)]">
-                        {consistencyDelta.toExponential(3)}
-                      </div>
-                    </div>
-                  </div>
+                  )}
                 </div>
               </div>
             </>

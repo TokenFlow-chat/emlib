@@ -198,6 +198,8 @@ export const baseMessages = {
       standardValueLabel: "Standard Value",
       pureValueLabel: "Pure EML Value",
       deltaLabel: "|delta|",
+      evaluationError: ({ detail }: { detail: string }) =>
+        `Numeric verification could not be completed: ${detail}`,
     },
     parseError: ({ detail }: { detail: string }) => `The expression could not be parsed: ${detail}`,
     diagram: {

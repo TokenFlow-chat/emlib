@@ -5,6 +5,16 @@ import { collectVariables, defaultValueForVariable, parseEnvValue } from "./util
 
 type Metrics = ReturnType<typeof analyzeExpr>;
 type ComplexValue = ReturnType<typeof evaluate>;
+type SuccessfulStructureState = Extract<ExpressionStructureState, { ok: true }>;
+type EvaluationSuccessState = {
+  evaluationOk: true;
+  standardValue: ComplexValue;
+  pureValue: ComplexValue;
+};
+type EvaluationFailureState = {
+  evaluationOk: false;
+  evaluationError: string;
+};
 
 type ExpressionStructureState =
   | {
@@ -25,11 +35,47 @@ export type ExpressionAnalysisState =
       ok: false;
       error: string;
     }
-  | (Extract<ExpressionStructureState, { ok: true }> & {
+  | (SuccessfulStructureState & {
       env: Record<string, number>;
-      standardValue: ComplexValue;
-      pureValue: ComplexValue;
-    });
+    } & (EvaluationSuccessState | EvaluationFailureState));
+
+function toErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+function evaluateSafely(
+  structureState: SuccessfulStructureState,
+  env: Record<string, number>,
+): EvaluationSuccessState | EvaluationFailureState {
+  const errors: string[] = [];
+  let standardValue: ComplexValue | null = null;
+  let pureValue: ComplexValue | null = null;
+
+  try {
+    standardValue = evaluate(structureState.standardExpr, env);
+  } catch (error) {
+    errors.push(`Standard evaluation failed: ${toErrorMessage(error)}`);
+  }
+
+  try {
+    pureValue = evaluate(structureState.pureExpr, env);
+  } catch (error) {
+    errors.push(`Pure EML evaluation failed: ${toErrorMessage(error)}`);
+  }
+
+  if (errors.length > 0 || standardValue === null || pureValue === null) {
+    return {
+      evaluationOk: false,
+      evaluationError: errors.join(" "),
+    };
+  }
+
+  return {
+    evaluationOk: true,
+    standardValue,
+    pureValue,
+  };
+}
 
 export function useExpressionAnalysis(
   expression: string,
@@ -53,7 +99,7 @@ export function useExpressionAnalysis(
     } catch (error) {
       return {
         ok: false,
-        error: error instanceof Error ? error.message : String(error),
+        error: toErrorMessage(error),
       };
     }
   }, [deferredExpression]);
@@ -71,8 +117,7 @@ export function useExpressionAnalysis(
     return {
       ...structureState,
       env,
-      standardValue: evaluate(structureState.standardExpr, env),
-      pureValue: evaluate(structureState.pureExpr, env),
+      ...evaluateSafely(structureState, env),
     };
   }, [envValues, structureState]);
 }

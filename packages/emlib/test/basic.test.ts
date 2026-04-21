@@ -100,6 +100,8 @@ test("simplifyToElementary recognizes the new compact witnesses", () => {
   expect(toString(simplifyToElementary(toPureEml(parse("x*y"))))).toBe("x*y");
   expect(toString(simplifyToElementary(toPureEml(parse("x/y"))))).toBe("x/y");
   expect(toString(simplifyToElementary(toPureEml(parse("x^2"))))).toBe("x^2");
+  // expect(toString(simplifyToElementary(toPureEml(parse("3"))))).toBe("3");
+  // expect(toString(simplifyToElementary(toPureEml(parse("tan(x)"))))).toBe("tan(x)");
 });
 
 test("compact EML witnesses stay numerically equivalent on arithmetic samples", () => {

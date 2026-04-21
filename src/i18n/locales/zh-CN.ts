@@ -178,6 +178,7 @@ export const zhCN = {
       standardValueLabel: "Standard Value",
       pureValueLabel: "Pure EML Value",
       deltaLabel: "|delta|",
+      evaluationError: ({ detail }: { detail: string }) => `数值校验未能完成：${detail}`,
     },
     parseError: ({ detail }: { detail: string }) => `表达式暂时无法解析：${detail}`,
     diagram: {
