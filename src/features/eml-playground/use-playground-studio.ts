@@ -20,6 +20,7 @@ import {
   type LayoutMode,
   type MasterPresetId,
 } from "@/features/eml-playground/constants";
+import { getTransformCopy } from "@/features/eml-playground/playground-i18n";
 import { useD2Preview, usePreviewActivation } from "@/features/eml-playground/use-d2-preview";
 import {
   type ExpressionTransform,
@@ -41,11 +42,6 @@ export type ExperimentTab = "compression" | "synthesis" | "master";
 
 export type ResultView = {
   key: DiagramSource;
-  title: string;
-  shortLabel: string;
-  summary: string;
-  description: string;
-  apiLabel: string;
   transform: ExpressionTransform;
 };
 
@@ -179,6 +175,7 @@ export function usePlaygroundStudio() {
   const previewActivation = usePreviewActivation<HTMLDivElement>();
   const masterPreset = MASTER_PRESETS[masterPresetId];
   const masterTree = useMemo(() => createMasterTree(masterPreset.depth), [masterPreset.depth]);
+  const playgroundMessages = messages.playground;
 
   usePlaygroundUrlSync({
     state: {
@@ -274,42 +271,22 @@ export function usePlaygroundStudio() {
     return [
       {
         key: "standard",
-        title: messages.playground.transforms.standard.title,
-        shortLabel: messages.playground.transforms.standard.shortLabel,
-        summary: messages.playground.transforms.standard.summary,
-        description: messages.playground.transforms.standard.description,
-        apiLabel: messages.playground.transforms.standard.api,
         transform: analysisState.standard,
       },
       {
         key: "pure",
-        title: messages.playground.transforms.pure.title,
-        shortLabel: messages.playground.transforms.pure.shortLabel,
-        summary: messages.playground.transforms.pure.summary,
-        description: messages.playground.transforms.pure.description,
-        apiLabel: messages.playground.transforms.pure.api,
         transform: analysisState.pure,
       },
       {
         key: "shortest",
-        title: messages.playground.transforms.shortest.title,
-        shortLabel: messages.playground.transforms.shortest.shortLabel,
-        summary: messages.playground.transforms.shortest.summary,
-        description: messages.playground.transforms.shortest.description,
-        apiLabel: messages.playground.transforms.shortest.api,
         transform: analysisState.shortest,
       },
       {
         key: "lifted",
-        title: messages.playground.transforms.lifted.title,
-        shortLabel: messages.playground.transforms.lifted.shortLabel,
-        summary: messages.playground.transforms.lifted.summary,
-        description: messages.playground.transforms.lifted.description,
-        apiLabel: messages.playground.transforms.lifted.api,
         transform: analysisState.lifted,
       },
     ];
-  }, [analysisState, messages]);
+  }, [analysisState]);
 
   const selectedView =
     expressionViews.find((view) => view.key === diagramSource) ?? expressionViews[0];
@@ -319,7 +296,7 @@ export function usePlaygroundStudio() {
     if (!analysisState.ok || !selectedView) {
       return {
         canRender: false,
-        reason: messages.playground.diagram.invalidExpressionReason,
+        reason: playgroundMessages.diagram.invalidExpressionReason,
         d2Source: "",
       };
     }
@@ -329,8 +306,8 @@ export function usePlaygroundStudio() {
     if (selectedView.transform.metrics.tokenCount > PURE_RENDER_LIMIT) {
       return {
         canRender: false,
-        reason: messages.playground.diagram.renderLimitReason({
-          label: selectedView.title,
+        reason: playgroundMessages.diagram.renderLimitReason({
+          label: getTransformCopy(playgroundMessages, selectedView.key).title,
           nodeCount: formatNumber(selectedView.transform.metrics.tokenCount),
           limit: formatNumber(PURE_RENDER_LIMIT),
         }),
@@ -343,7 +320,7 @@ export function usePlaygroundStudio() {
       reason: null,
       d2Source,
     };
-  }, [analysisState, formatNumber, messages, selectedView]);
+  }, [analysisState, formatNumber, playgroundMessages, selectedView]);
 
   const d2Preview = useD2Preview({
     active: previewActivation.isActivated,
@@ -428,7 +405,7 @@ export function usePlaygroundStudio() {
       if (!result) {
         setSynthesisState({
           status: "error",
-          error: messages.playground.experiments.synthesis.noResult,
+          error: playgroundMessages.experiments.synthesis.noResult,
         });
         return;
       }
@@ -496,8 +473,6 @@ export function usePlaygroundStudio() {
   };
 
   return {
-    formatNumber,
-    messages,
     workspaceTab,
     setWorkspaceTab,
     experimentTab,

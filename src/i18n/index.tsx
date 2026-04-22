@@ -99,3 +99,8 @@ export function useI18n() {
 
   return context;
 }
+
+export function useMessages<T>(selector: (messages: MessageDictionary) => T): T {
+  const { messages } = useI18n();
+  return selector(messages);
+}

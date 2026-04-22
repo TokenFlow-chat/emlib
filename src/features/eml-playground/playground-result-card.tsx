@@ -1,43 +1,31 @@
 import { Button } from "@/components/ui/button";
 import { InfoTip } from "@/components/ui/info-tip";
+import { type DiagramSource } from "@/features/eml-playground/constants";
+import { getTransformCopy } from "@/features/eml-playground/playground-i18n";
 import { StatPill } from "@/features/eml-playground/playground-shared";
 import type { ExpressionTransform } from "@/features/eml-playground/use-expression-analysis";
 import { formatSignedDelta, formatTypeSet } from "@/features/eml-playground/utils";
+import { useI18n, useMessages } from "@/i18n";
 
 export function ResultCard({
   active,
-  title,
-  summary,
-  description,
-  apiLabel,
+  viewKey,
   transform,
   standardMetrics,
-  previewLabel,
-  deltaLabel,
-  tokenNodeLabel,
-  typesLabel,
-  operatorTypeLabel,
-  formatNumber,
   onPreview,
 }: {
   active: boolean;
-  title: string;
-  summary: string;
-  description: string;
-  apiLabel: string;
+  viewKey: DiagramSource;
   transform: ExpressionTransform;
   standardMetrics: {
     tokenCount: number;
     typeCount: number;
   };
-  previewLabel: string;
-  deltaLabel: string;
-  tokenNodeLabel: string;
-  typesLabel: string;
-  operatorTypeLabel: string;
-  formatNumber: (value: number) => string;
   onPreview: () => void;
 }) {
+  const { formatNumber } = useI18n();
+  const playground = useMessages((messages) => messages.playground);
+  const copy = getTransformCopy(playground, viewKey);
   const tokenDelta = transform.metrics.tokenCount - standardMetrics.tokenCount;
   const typeDelta = transform.metrics.typeCount - standardMetrics.typeCount;
 
@@ -53,11 +41,13 @@ export function ResultCard({
       <div className="flex items-start justify-between gap-2.5">
         <div className="min-w-0">
           <div className="text-[10px] font-semibold tracking-[0.18em] text-[color:var(--ink-soft)] uppercase">
-            {apiLabel}
+            {copy.api}
           </div>
           <div className="mt-1 flex items-start gap-2">
-            <div className="min-w-0 text-[15px] font-semibold text-[color:var(--ink)]">{title}</div>
-            <InfoTip label={`${summary} ${description}`} className="shrink-0" />
+            <div className="min-w-0 text-[15px] font-semibold text-[color:var(--ink)]">
+              {copy.title}
+            </div>
+            <InfoTip label={`${copy.summary} ${copy.description}`} className="shrink-0" />
           </div>
         </div>
         <Button
@@ -67,7 +57,7 @@ export function ResultCard({
           className="rounded-full"
           onClick={onPreview}
         >
-          {previewLabel}
+          {playground.transforms.previewButton}
         </Button>
       </div>
 
@@ -76,13 +66,22 @@ export function ResultCard({
       </pre>
 
       <div className="mt-3 grid gap-2 grid-cols-2 xl:grid-cols-4">
-        <StatPill label={tokenNodeLabel} value={formatNumber(transform.metrics.tokenCount)} />
-        <StatPill label={operatorTypeLabel} value={formatNumber(transform.metrics.typeCount)} />
         <StatPill
-          label={deltaLabel}
+          label={playground.metrics.tokenNodeLabel}
+          value={formatNumber(transform.metrics.tokenCount)}
+        />
+        <StatPill
+          label={playground.metrics.operatorTypeLabel}
+          value={formatNumber(transform.metrics.typeCount)}
+        />
+        <StatPill
+          label={playground.transforms.deltaLabel}
           value={`${formatSignedDelta(tokenDelta)} / ${formatSignedDelta(typeDelta)}`}
         />
-        <StatPill label={typesLabel} value={formatTypeSet(transform.metrics.types)} />
+        <StatPill
+          label={playground.transforms.typesLabel}
+          value={formatTypeSet(transform.metrics.types)}
+        />
       </div>
     </div>
   );

@@ -4,12 +4,13 @@ import { LuCheck, LuCopy } from "react-icons/lu";
 import { Button } from "@/components/ui/button";
 import { LoadingMark } from "@/components/ui/loading-mark";
 import { Textarea } from "@/components/ui/textarea";
+import { getTransformCopy } from "@/features/eml-playground/playground-i18n";
 import { AsyncMessage, SegmentedTabs } from "@/features/eml-playground/playground-shared";
 import type { PlaygroundStudioState } from "@/features/eml-playground/use-playground-studio";
+import { useMessages } from "@/i18n";
 
 export function PlaygroundPreviewPanel({ studio }: { studio: PlaygroundStudioState }) {
   const {
-    messages,
     diagramSource,
     setDiagramSource,
     layoutMode,
@@ -20,6 +21,7 @@ export function PlaygroundPreviewPanel({ studio }: { studio: PlaygroundStudioSta
     handleCopyD2,
     expressionViews,
   } = studio;
+  const playground = useMessages((messages) => messages.playground);
   const imageRef = useRef<HTMLImageElement | null>(null);
   const [isImageLoading, setIsImageLoading] = useState(false);
 
@@ -46,11 +48,11 @@ export function PlaygroundPreviewPanel({ studio }: { studio: PlaygroundStudioSta
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[color:var(--line)] px-3.5 py-3">
           <div>
             <div className="text-[10px] font-semibold tracking-[0.18em] text-[color:var(--ink-soft)] uppercase">
-              {messages.playground.diagram.eyebrow}
+              {playground.diagram.eyebrow}
             </div>
           </div>
           <div className="rounded-full border border-[color:var(--line)] bg-white/80 px-3 py-1 text-xs font-semibold text-[color:var(--ink-soft)]">
-            {messages.playground.diagram.layoutBadge({ layout: layoutMode })}
+            {playground.diagram.layoutBadge({ layout: layoutMode })}
           </div>
         </div>
 
@@ -60,20 +62,20 @@ export function PlaygroundPreviewPanel({ studio }: { studio: PlaygroundStudioSta
             onChange={setDiagramSource}
             items={expressionViews.map((view) => ({
               value: view.key,
-              label: view.title,
-              shortLabel: view.shortLabel,
+              label: getTransformCopy(playground, view.key).title,
+              shortLabel: getTransformCopy(playground, view.key).shortLabel,
             }))}
           />
         </div>
 
         <div className="diagram-canvas px-3.5 py-3.5">
           {!previewActivation.isActivated && diagramPayload.canRender ? (
-            <AsyncMessage>{messages.playground.diagram.deferredHint}</AsyncMessage>
+            <AsyncMessage>{playground.diagram.deferredHint}</AsyncMessage>
           ) : diagramPayload.reason ? (
             <AsyncMessage>{diagramPayload.reason}</AsyncMessage>
           ) : d2Preview.renderError ? (
             <AsyncMessage tone="warning">
-              {messages.playground.diagram.renderError({
+              {playground.diagram.renderError({
                 detail: d2Preview.renderError,
               })}
             </AsyncMessage>
@@ -88,8 +90,8 @@ export function PlaygroundPreviewPanel({ studio }: { studio: PlaygroundStudioSta
                 <img
                   ref={imageRef}
                   src={d2Preview.svgUrl}
-                  alt={messages.playground.diagram.previewAriaLabel({
-                    mode: messages.playground.diagram.eyebrow,
+                  alt={playground.diagram.previewAriaLabel({
+                    mode: playground.diagram.eyebrow,
                   })}
                   className={[
                     "d2-preview-image transition-opacity duration-200",
@@ -108,11 +110,11 @@ export function PlaygroundPreviewPanel({ studio }: { studio: PlaygroundStudioSta
                 </div>
               ) : null}
               {d2Preview.isRendering ? (
-                <div className="sr-only">{messages.playground.diagram.loading}</div>
+                <div className="sr-only">{playground.diagram.loading}</div>
               ) : null}
             </div>
           ) : (
-            <AsyncMessage>{messages.playground.diagram.empty}</AsyncMessage>
+            <AsyncMessage>{playground.diagram.empty}</AsyncMessage>
           )}
         </div>
       </div>
@@ -120,7 +122,7 @@ export function PlaygroundPreviewPanel({ studio }: { studio: PlaygroundStudioSta
       <div className="min-w-0 rounded-[1rem] border border-[color:var(--line)] bg-white/78 p-3.5">
         <div className="flex items-center justify-between gap-3">
           <div className="text-xs font-semibold tracking-[0.18em] text-[color:var(--ink-soft)] uppercase">
-            {messages.playground.d2Source.title}
+            {playground.d2Source.title}
           </div>
           <Button
             type="button"
@@ -137,10 +139,10 @@ export function PlaygroundPreviewPanel({ studio }: { studio: PlaygroundStudioSta
               <LuCopy className="size-4" />
             )}
             {copyState === "copied"
-              ? messages.playground.d2Source.copySuccess
+              ? playground.d2Source.copySuccess
               : copyState === "failed"
-                ? messages.playground.d2Source.copyFailed
-                : messages.playground.d2Source.copyIdle}
+                ? playground.d2Source.copyFailed
+                : playground.d2Source.copyIdle}
           </Button>
         </div>
         <Textarea

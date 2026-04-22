@@ -29,11 +29,12 @@ import {
   formatSignedDelta,
   formatTypeSet,
 } from "@/features/eml-playground/utils";
+import { useI18n, useMessages } from "@/i18n";
 
 export default function PlaygroundExperimentsTab({ studio }: { studio: PlaygroundStudioState }) {
+  const { formatNumber } = useI18n();
+  const playground = useMessages((messages) => messages.playground);
   const {
-    messages,
-    formatNumber,
     experimentTab,
     setExperimentTab,
     compressionMode,
@@ -68,34 +69,34 @@ export default function PlaygroundExperimentsTab({ studio }: { studio: Playgroun
         items={[
           {
             value: "compression",
-            label: messages.playground.experiments.compression.title,
-            shortLabel: messages.playground.experiments.compression.shortLabel,
+            label: playground.experiments.compression.title,
+            shortLabel: playground.experiments.compression.shortLabel,
           },
           {
             value: "synthesis",
-            label: messages.playground.experiments.synthesis.title,
-            shortLabel: messages.playground.experiments.synthesis.shortLabel,
+            label: playground.experiments.synthesis.title,
+            shortLabel: playground.experiments.synthesis.shortLabel,
           },
           {
             value: "master",
-            label: messages.playground.experiments.master.title,
-            shortLabel: messages.playground.experiments.master.shortLabel,
+            label: playground.experiments.master.title,
+            shortLabel: playground.experiments.master.shortLabel,
           },
         ]}
       />
 
       {experimentTab === "compression" ? (
         <ExperimentShell
-          eyebrow={messages.playground.experiments.compression.eyebrow}
-          title={messages.playground.experiments.compression.title}
+          eyebrow={playground.experiments.compression.eyebrow}
+          title={playground.experiments.compression.title}
           icon={<LuSparkles className="size-5" />}
-          tools={<InfoTip label={messages.playground.experiments.compression.description} />}
+          tools={<InfoTip label={playground.experiments.compression.description} />}
         >
           <div className="grid gap-3 sm:grid-cols-[minmax(0,0.8fr)_minmax(0,1fr)]">
             <div className="space-y-3">
               <div className="space-y-1.5">
                 <Label className="text-[color:var(--ink)]">
-                  {messages.playground.experiments.compression.levelLabel}
+                  {playground.experiments.compression.levelLabel}
                 </Label>
                 <Select
                   value={compressionMode}
@@ -109,13 +110,13 @@ export default function PlaygroundExperimentsTab({ studio }: { studio: Playgroun
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="light">
-                      {messages.playground.experiments.compression.levels.light}
+                      {playground.experiments.compression.levels.light}
                     </SelectItem>
                     <SelectItem value="medium">
-                      {messages.playground.experiments.compression.levels.medium}
+                      {playground.experiments.compression.levels.medium}
                     </SelectItem>
                     <SelectItem value="aggressive">
-                      {messages.playground.experiments.compression.levels.aggressive}
+                      {playground.experiments.compression.levels.aggressive}
                     </SelectItem>
                   </SelectContent>
                 </Select>
@@ -124,17 +125,17 @@ export default function PlaygroundExperimentsTab({ studio }: { studio: Playgroun
               {analysisState.ok ? (
                 <div className="grid gap-2 sm:grid-cols-2">
                   <StatPill
-                    label={messages.playground.experiments.compression.baselineLabel}
+                    label={playground.experiments.compression.baselineLabel}
                     value={formatNumber(analysisState.pure.metrics.tokenCount)}
                   />
                   <StatPill
-                    label={messages.playground.experiments.compression.typesLabel}
+                    label={playground.experiments.compression.typesLabel}
                     value={formatTypeSet(analysisState.pure.metrics.types)}
                   />
                 </div>
               ) : (
                 <AsyncMessage>
-                  {messages.playground.experiments.compression.requiresValidExpression}
+                  {playground.experiments.compression.requiresValidExpression}
                 </AsyncMessage>
               )}
 
@@ -149,32 +150,32 @@ export default function PlaygroundExperimentsTab({ studio }: { studio: Playgroun
               >
                 <LuScanSearch className="size-4" />
                 {compressionState.status === "running"
-                  ? messages.playground.experiments.shared.running
-                  : messages.playground.experiments.compression.runButton}
+                  ? playground.experiments.shared.running
+                  : playground.experiments.compression.runButton}
               </Button>
             </div>
 
             <div className="space-y-3">
               {compressionState.status === "idle" ? (
-                <AsyncMessage>{messages.playground.experiments.compression.idleHint}</AsyncMessage>
+                <AsyncMessage>{playground.experiments.compression.idleHint}</AsyncMessage>
               ) : compressionState.status === "error" ? (
                 <AsyncMessage tone="warning">{compressionState.error}</AsyncMessage>
               ) : compressionState.status === "success" && compressionState.data.exprText ? (
                 <>
                   <div className="grid gap-2 sm:grid-cols-3">
                     <StatPill
-                      label={messages.playground.experiments.compression.afterLabel}
+                      label={playground.experiments.compression.afterLabel}
                       value={formatNumber(compressionState.data.candidateTokens ?? 0)}
                     />
                     <StatPill
-                      label={messages.playground.experiments.compression.gainLabel}
+                      label={playground.experiments.compression.gainLabel}
                       value={formatSignedDelta(
                         (compressionState.data.candidateTokens ?? 0) -
                           compressionState.data.baselineTokens,
                       )}
                     />
                     <StatPill
-                      label={messages.playground.experiments.compression.deltaLabel}
+                      label={playground.experiments.compression.deltaLabel}
                       value={formatScientific(compressionState.data.delta ?? Number.NaN)}
                     />
                   </div>
@@ -183,9 +184,7 @@ export default function PlaygroundExperimentsTab({ studio }: { studio: Playgroun
                   </pre>
                 </>
               ) : compressionState.status === "success" ? (
-                <AsyncMessage>
-                  {messages.playground.experiments.compression.noImprovement}
-                </AsyncMessage>
+                <AsyncMessage>{playground.experiments.compression.noImprovement}</AsyncMessage>
               ) : null}
             </div>
           </div>
@@ -194,13 +193,13 @@ export default function PlaygroundExperimentsTab({ studio }: { studio: Playgroun
 
       {experimentTab === "synthesis" ? (
         <ExperimentShell
-          eyebrow={messages.playground.experiments.synthesis.eyebrow}
-          title={messages.playground.experiments.synthesis.title}
+          eyebrow={playground.experiments.synthesis.eyebrow}
+          title={playground.experiments.synthesis.title}
           icon={<LuFlaskConical className="size-5" />}
-          tools={<InfoTip label={messages.playground.experiments.synthesis.description} />}
+          tools={<InfoTip label={playground.experiments.synthesis.description} />}
         >
           <div className="flex flex-wrap gap-2">
-            {messages.playground.experiments.synthesis.samples.map((sample) => (
+            {playground.experiments.synthesis.samples.map((sample) => (
               <Button
                 key={sample.expr}
                 type="button"
@@ -219,7 +218,7 @@ export default function PlaygroundExperimentsTab({ studio }: { studio: Playgroun
               className="rounded-full border-[color:var(--line)] bg-[color:var(--paper-strong)] px-2.5 text-[12px]"
               onClick={() => applySynthTarget(expression)}
             >
-              {messages.playground.experiments.synthesis.useCurrent}
+              {playground.experiments.synthesis.useCurrent}
             </Button>
           </div>
 
@@ -227,7 +226,7 @@ export default function PlaygroundExperimentsTab({ studio }: { studio: Playgroun
             <div className="space-y-3">
               <div className="space-y-1.5">
                 <Label htmlFor="synth-target" className="text-[color:var(--ink)]">
-                  {messages.playground.experiments.synthesis.targetLabel}
+                  {playground.experiments.synthesis.targetLabel}
                 </Label>
                 <Textarea
                   id="synth-target"
@@ -240,7 +239,7 @@ export default function PlaygroundExperimentsTab({ studio }: { studio: Playgroun
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-1.5">
                   <Label className="text-[color:var(--ink)]">
-                    {messages.playground.experiments.synthesis.maxLeavesLabel}
+                    {playground.experiments.synthesis.maxLeavesLabel}
                   </Label>
                   <Select
                     value={String(synthMaxLeaves)}
@@ -263,7 +262,7 @@ export default function PlaygroundExperimentsTab({ studio }: { studio: Playgroun
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-[color:var(--ink)]">
-                    {messages.playground.experiments.synthesis.beamWidthLabel}
+                    {playground.experiments.synthesis.beamWidthLabel}
                   </Label>
                   <Select
                     value={String(synthBeamWidth)}
@@ -289,17 +288,17 @@ export default function PlaygroundExperimentsTab({ studio }: { studio: Playgroun
               {synthTargetState.ok ? (
                 <div className="grid gap-2 sm:grid-cols-2">
                   <StatPill
-                    label={messages.playground.experiments.synthesis.targetTokensLabel}
+                    label={playground.experiments.synthesis.targetTokensLabel}
                     value={formatNumber(synthTargetState.metrics.tokenCount)}
                   />
                   <StatPill
-                    label={messages.playground.experiments.synthesis.variablesLabel}
+                    label={playground.experiments.synthesis.variablesLabel}
                     value={synthTargetState.variables.join(", ") || "none"}
                   />
                 </div>
               ) : (
                 <AsyncMessage tone="warning">
-                  {messages.playground.experiments.synthesis.invalidTarget({
+                  {playground.experiments.synthesis.invalidTarget({
                     detail: synthTargetState.error,
                   })}
                 </AsyncMessage>
@@ -316,33 +315,33 @@ export default function PlaygroundExperimentsTab({ studio }: { studio: Playgroun
               >
                 <LuFlaskConical className="size-4" />
                 {synthesisState.status === "running"
-                  ? messages.playground.experiments.shared.running
-                  : messages.playground.experiments.synthesis.runButton}
+                  ? playground.experiments.shared.running
+                  : playground.experiments.synthesis.runButton}
               </Button>
             </div>
 
             <div className="space-y-3">
               {synthesisState.status === "idle" ? (
-                <AsyncMessage>{messages.playground.experiments.synthesis.idleHint}</AsyncMessage>
+                <AsyncMessage>{playground.experiments.synthesis.idleHint}</AsyncMessage>
               ) : synthesisState.status === "error" ? (
                 <AsyncMessage tone="warning">{synthesisState.error}</AsyncMessage>
               ) : synthesisState.status === "success" ? (
                 <>
                   <div className="grid gap-2 sm:grid-cols-2">
                     <StatPill
-                      label={messages.playground.experiments.synthesis.resultTokensLabel}
+                      label={playground.experiments.synthesis.resultTokensLabel}
                       value={formatNumber(synthesisState.data.resultTokens)}
                     />
                     <StatPill
-                      label={messages.playground.experiments.synthesis.leavesLabel}
+                      label={playground.experiments.synthesis.leavesLabel}
                       value={formatNumber(synthesisState.data.leaves)}
                     />
                     <StatPill
-                      label={messages.playground.experiments.synthesis.distanceLabel}
+                      label={playground.experiments.synthesis.distanceLabel}
                       value={formatScientific(synthesisState.data.distance)}
                     />
                     <StatPill
-                      label={messages.playground.experiments.synthesis.deltaLabel}
+                      label={playground.experiments.synthesis.deltaLabel}
                       value={formatScientific(synthesisState.data.delta)}
                     />
                   </div>
@@ -358,16 +357,16 @@ export default function PlaygroundExperimentsTab({ studio }: { studio: Playgroun
 
       {experimentTab === "master" ? (
         <ExperimentShell
-          eyebrow={messages.playground.experiments.master.eyebrow}
-          title={messages.playground.experiments.master.title}
+          eyebrow={playground.experiments.master.eyebrow}
+          title={playground.experiments.master.title}
           icon={<LuBrain className="size-5" />}
-          tools={<InfoTip label={messages.playground.experiments.master.description} />}
+          tools={<InfoTip label={playground.experiments.master.description} />}
         >
           <div className="grid gap-3 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1fr)]">
             <div className="space-y-3">
               <div className="space-y-1.5">
                 <Label className="text-[color:var(--ink)]">
-                  {messages.playground.experiments.master.presetLabel}
+                  {playground.experiments.master.presetLabel}
                 </Label>
                 <Select
                   value={masterPresetId}
@@ -380,15 +379,11 @@ export default function PlaygroundExperimentsTab({ studio }: { studio: Playgroun
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="exp">
-                      {messages.playground.experiments.master.presets.exp}
-                    </SelectItem>
+                    <SelectItem value="exp">{playground.experiments.master.presets.exp}</SelectItem>
                     <SelectItem value="eMinusX">
-                      {messages.playground.experiments.master.presets.eMinusX}
+                      {playground.experiments.master.presets.eMinusX}
                     </SelectItem>
-                    <SelectItem value="ln">
-                      {messages.playground.experiments.master.presets.ln}
-                    </SelectItem>
+                    <SelectItem value="ln">{playground.experiments.master.presets.ln}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -398,21 +393,21 @@ export default function PlaygroundExperimentsTab({ studio }: { studio: Playgroun
                   {masterPreset.expr}
                 </div>
                 <p className="mt-1.5 text-sm leading-5 text-[color:var(--ink-soft)]">
-                  {messages.playground.experiments.master.presetDescriptions[masterPresetId]}
+                  {playground.experiments.master.presetDescriptions[masterPresetId]}
                 </p>
               </div>
 
               <div className="grid gap-2 sm:grid-cols-3">
                 <StatPill
-                  label={messages.playground.experiments.master.depthLabel}
+                  label={playground.experiments.master.depthLabel}
                   value={formatNumber(masterTree.depth)}
                 />
                 <StatPill
-                  label={messages.playground.experiments.master.nodesLabel}
+                  label={playground.experiments.master.nodesLabel}
                   value={formatNumber(masterTree.nodeCount)}
                 />
                 <StatPill
-                  label={messages.playground.experiments.master.paramsLabel}
+                  label={playground.experiments.master.paramsLabel}
                   value={formatNumber(masterTree.paramCount)}
                 />
               </div>
@@ -428,37 +423,37 @@ export default function PlaygroundExperimentsTab({ studio }: { studio: Playgroun
               >
                 <LuBrain className="size-4" />
                 {masterState.status === "running"
-                  ? messages.playground.experiments.shared.running
-                  : messages.playground.experiments.master.runButton}
+                  ? playground.experiments.shared.running
+                  : playground.experiments.master.runButton}
               </Button>
             </div>
 
             <div className="space-y-3">
               {masterState.status === "idle" ? (
-                <AsyncMessage>{messages.playground.experiments.master.idleHint}</AsyncMessage>
+                <AsyncMessage>{playground.experiments.master.idleHint}</AsyncMessage>
               ) : masterState.status === "error" ? (
                 <AsyncMessage tone="warning">{masterState.error}</AsyncMessage>
               ) : masterState.status === "success" ? (
                 <>
                   <div className="grid gap-2 sm:grid-cols-2">
                     <StatPill
-                      label={messages.playground.experiments.master.lossLabel}
+                      label={playground.experiments.master.lossLabel}
                       value={formatScientific(masterState.data.loss)}
                     />
                     <StatPill
-                      label={messages.playground.experiments.master.restartsLabel}
+                      label={playground.experiments.master.restartsLabel}
                       value={formatNumber(masterState.data.restarts)}
                     />
                     <StatPill
-                      label={messages.playground.experiments.master.epochsLabel}
+                      label={playground.experiments.master.epochsLabel}
                       value={formatNumber(masterState.data.totalEpochs)}
                     />
                     <StatPill
-                      label={messages.playground.experiments.master.statusLabel}
+                      label={playground.experiments.master.statusLabel}
                       value={
                         masterState.data.success
-                          ? messages.playground.experiments.master.statuses.success
-                          : messages.playground.experiments.master.statuses.partial
+                          ? playground.experiments.master.statuses.success
+                          : playground.experiments.master.statuses.partial
                       }
                     />
                   </div>

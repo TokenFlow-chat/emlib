@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PlaygroundPreviewPanel } from "@/features/eml-playground/playground-preview-panel";
 import { PlaygroundTabFallback, SegmentedTabs } from "@/features/eml-playground/playground-shared";
 import { usePlaygroundStudio } from "@/features/eml-playground/use-playground-studio";
+import { useMessages } from "@/i18n";
 
 const AnalyzeTab = lazy(() => import("@/features/eml-playground/playground-analyze-tab"));
 const CompareTab = lazy(() => import("@/features/eml-playground/playground-compare-tab"));
@@ -18,7 +19,8 @@ const tabLoaders = {
 
 export function PlaygroundStudio() {
   const studio = usePlaygroundStudio();
-  const { messages, workspaceTab, setWorkspaceTab } = studio;
+  const { workspaceTab, setWorkspaceTab } = studio;
+  const playground = useMessages((messages) => messages.playground);
   const showPreviewPanel = workspaceTab !== "experiments";
 
   useEffect(() => {
@@ -37,17 +39,15 @@ export function PlaygroundStudio() {
       <CardHeader className="gap-2 border-b border-[color:var(--line)]/70 px-4 pb-3.5 sm:px-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="text-[11px] font-semibold tracking-[0.18em] text-[color:var(--ink-soft)] uppercase">
-            {messages.playground.eyebrow}
+            {playground.eyebrow}
           </div>
-          <div className="text-[11px] text-[color:var(--ink-soft)]">
-            {messages.playground.badge}
-          </div>
+          <div className="text-[11px] text-[color:var(--ink-soft)]">{playground.badge}</div>
         </div>
         <div className="flex items-center justify-between gap-3">
           <CardTitle className="font-display text-3xl text-[color:var(--ink)]">
-            {messages.playground.title}
+            {playground.title}
           </CardTitle>
-          <InfoTip label={messages.playground.description} />
+          <InfoTip label={playground.description} />
         </div>
       </CardHeader>
       <CardContent className="px-4 pt-3.5 sm:px-5">
@@ -64,18 +64,18 @@ export function PlaygroundStudio() {
               items={[
                 {
                   value: "analyze",
-                  label: messages.playground.tabs.analyze,
-                  shortLabel: messages.playground.tabs.analyzeShort,
+                  label: playground.tabs.analyze,
+                  shortLabel: playground.tabs.analyzeShort,
                 },
                 {
                   value: "compare",
-                  label: messages.playground.tabs.compare,
-                  shortLabel: messages.playground.tabs.compareShort,
+                  label: playground.tabs.compare,
+                  shortLabel: playground.tabs.compareShort,
                 },
                 {
                   value: "experiments",
-                  label: messages.playground.tabs.experiments,
-                  shortLabel: messages.playground.tabs.experimentsShort,
+                  label: playground.tabs.experiments,
+                  shortLabel: playground.tabs.experimentsShort,
                 },
               ]}
             />
