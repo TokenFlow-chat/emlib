@@ -29,7 +29,7 @@ export const zhCN = {
     titleLead: "EML as a",
     titleAccent: "Generative Primitive",
     description:
-      "这个页面现在覆盖了更完整的实践闭环：先讲论文，再用同一个表达式串起 emlib 的主要变换，最后直接在浏览器里演示 synthesis 和 master formula 训练。",
+      "EML 把初等函数简化为一个算子。emlib 实现了表达式的解析、lowering、重写、求值、可视化、合成和训练。",
     paperNote: {
       label: "原论文",
       title: "All elementary functions from a single binary operator",

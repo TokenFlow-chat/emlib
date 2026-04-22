@@ -48,7 +48,7 @@ export const baseMessages = {
     titleLead: "EML as a",
     titleAccent: "Generative Primitive",
     description:
-      "This page now covers the full practical loop: summarize the paper, compare emlib transforms on one expression, and demo synthesis plus master-formula training directly in the browser.",
+      "EML reduces elementary functions to one operator. emlib implements expression parsing, lowering, rewriting, evaluation, visualization, synthesis, and training.",
     paperNote: {
       label: "Original paper",
       title: "All elementary functions from a single binary operator",
