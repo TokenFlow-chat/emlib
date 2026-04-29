@@ -40,6 +40,7 @@ bun run test
 - `evaluate(expr, env?)` performs approximate complex evaluation
 - `evaluateLossless(expr, env?)` keeps exact rational and complex-rational arithmetic when possible and preserves symbolic transcendental leftovers otherwise
 - `valueToExpr(value)` turns a lossless value back into an expression AST
+- `losslessToString(value)` prints a lossless value through the compact expression formatter
 
 ### Visualization and analysis
 
@@ -71,6 +72,7 @@ import {
   evaluate,
   evaluateLossless,
   exprToD2,
+  losslessToString,
   parse,
   reduceTokens,
   toPureEml,
@@ -85,6 +87,7 @@ console.log(toString(toPureEml(expr)));
 console.log(toString(reduceTokens(expr)));
 console.log(evaluate(expr, { x: 1.25, y: 3 }));
 console.log(toString(valueToExpr(evaluateLossless(parse("(1+2*i)/(3-4*i)")))));
+console.log(losslessToString(evaluateLossless(parse("exp(-x)-ln(x*y)"), { x: 0.5, y: 2 })));
 console.log(exprToD2(expr));
 ```
 

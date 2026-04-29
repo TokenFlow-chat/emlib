@@ -3,6 +3,7 @@ import {
   analyzeExpr,
   evaluate,
   evaluateLossless,
+  losslessToString,
   parse,
   reduceTokens,
   reduceTokensString,
@@ -67,6 +68,15 @@ test("lossless arithmetic keeps exact rational and complex values", () => {
   expect(toString(valueToExpr(complex))).toBe("-1/5+2/5*i");
 });
 
+test("lossless value rendering keeps exact symbolic leftovers compact", () => {
+  const symbolic = evaluateLossless(parse("exp(-x) - ln(x*y)"), { x: 0.5, y: 2 });
+  expect(toString(valueToExpr(symbolic))).toBe("exp(-1/2)");
+  expect(losslessToString(symbolic)).toBe("exp(-1/2)");
+
+  expect(losslessToString(evaluateLossless(parse("i")))).toBe("i");
+  expect(losslessToString(evaluateLossless(parse("1 - 2*i")))).toBe("1-2*i");
+});
+
 test("lossless evaluation keeps safe elementary identities exact", () => {
   expect(toString(valueToExpr(evaluateLossless(parse("sqrt(4)"))))).toBe("2");
   expect(toString(valueToExpr(evaluateLossless(parse("sqrt(-4)"))))).toBe("2*i");
@@ -79,7 +89,7 @@ test("lossless evaluation keeps safe elementary identities exact", () => {
 
 test("lossless evaluation stays conservative on branch-sensitive log identities", () => {
   const symbolic = evaluateLossless(parse("ln(exp(i))"));
-  expect(toString(valueToExpr(symbolic))).toBe("ln(exp(1*i))");
+  expect(toString(valueToExpr(symbolic))).toBe("ln(exp(i))");
 });
 
 test("lossless evaluation cancels identical symbolic subexpressions safely", () => {

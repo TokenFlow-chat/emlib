@@ -5,7 +5,9 @@ import {
   div,
   exp,
   exprEquals,
+  isNegativeOne,
   isOne,
+  isZero,
   ln,
   mul,
   neg,
@@ -14,6 +16,7 @@ import {
   sqrt,
   sub,
 } from "./ast";
+import { toString } from "./print";
 
 export interface Rational {
   num: bigint;
@@ -475,19 +478,93 @@ export function complexPowInteger(base: ComplexRational, exponent: bigint): Comp
   return acc;
 }
 
+function exactNegExpr(value: Expr): Expr {
+  if (isZero(value)) return num(0);
+  if (value.kind === "neg") return value.value;
+  if (value.kind === "num") {
+    return num(value.raw.startsWith("-") ? value.raw.slice(1) : `-${value.raw}`);
+  }
+  return neg(value);
+}
+
+function exactAddExpr(left: Expr, right: Expr): Expr {
+  if (isZero(left)) return right;
+  if (isZero(right)) return left;
+  return add(left, right);
+}
+
+function exactSubExpr(left: Expr, right: Expr): Expr {
+  if (isZero(right)) return left;
+  if (isZero(left)) return exactNegExpr(right);
+  return sub(left, right);
+}
+
+function exactMulExpr(left: Expr, right: Expr): Expr {
+  if (isOne(left)) return right;
+  if (isOne(right)) return left;
+  if (isNegativeOne(left)) return exactNegExpr(right);
+  if (isNegativeOne(right)) return exactNegExpr(left);
+  return mul(left, right);
+}
+
+function exactDivExpr(left: Expr, right: Expr): Expr {
+  if (isOne(right)) return left;
+  return div(left, right);
+}
+
+function exactPowExpr(base: Expr, exponent: Expr): Expr {
+  if (isOne(exponent)) return base;
+  return pow(base, exponent);
+}
+
+function exactImaginaryTerm(coefficient: Rational): Expr {
+  if (rationalIsOne(coefficient)) return constant("i");
+  if (coefficient.num === -coefficient.den) return exactNegExpr(constant("i"));
+  return exactMulExpr(rationalToExpr(coefficient), constant("i"));
+}
+
+function exactOrSymbolicBinary(
+  left: LosslessValue,
+  right: LosslessValue,
+  exactFn: (a: ComplexRational, b: ComplexRational) => ComplexRational,
+  exprFn: (a: Expr, b: Expr) => Expr,
+): LosslessValue {
+  if (left.kind === "complex-rational" && right.kind === "complex-rational") {
+    return exactFn(left, right);
+  }
+  return { kind: "symbolic", expr: exprFn(valueToExpr(left), valueToExpr(right)) };
+}
+
+function exactOrSymbolicUnary(
+  value: LosslessValue,
+  exactFn: (a: ComplexRational) => ComplexRational,
+  exprFn: (a: Expr) => Expr,
+): LosslessValue {
+  if (value.kind === "complex-rational") {
+    return exactFn(value);
+  }
+  return { kind: "symbolic", expr: exprFn(valueToExpr(value)) };
+}
+
 export function valueToExpr(value: LosslessValue): Expr {
   if (value.kind === "symbolic") return value.expr;
   if (rationalIsZero(value.im)) return rationalToExpr(value.re);
 
   const re = rationalToExpr(value.re);
-  const im = rationalToExpr(value.im);
-  const imag = mul(im, constant("i"));
-  return rationalIsZero(value.re) ? imag : add(re, imag);
+  if (rationalIsZero(value.re)) return exactImaginaryTerm(value.im);
+
+  const imagSign = rationalSign(value.im);
+  const imagMagnitude = exactImaginaryTerm(imagSign < 0 ? rationalNeg(value.im) : value.im);
+  return imagSign < 0 ? exactSubExpr(re, imagMagnitude) : exactAddExpr(re, imagMagnitude);
 }
 
 export function rationalToExpr(value: Rational): Expr {
   if (value.den === 1n) return num(value.num);
   return div(num(value.num), num(value.den));
+}
+
+export function losslessToString(value: LosslessValue): string {
+  return toString(valueToExpr(value));
 }
 
 export function losslessToApprox(value: LosslessValue): ApproxComplex {
@@ -533,29 +610,6 @@ function approxFromInput(value: LosslessInput): ApproxComplex | null {
   if (!re || !im) return null;
   if (im.im !== 0) return null;
   return approxComplex(re.re, im.re);
-}
-
-function exactOrSymbolicBinary(
-  left: LosslessValue,
-  right: LosslessValue,
-  exactFn: (a: ComplexRational, b: ComplexRational) => ComplexRational,
-  exprFn: (a: Expr, b: Expr) => Expr,
-): LosslessValue {
-  if (left.kind === "complex-rational" && right.kind === "complex-rational") {
-    return exactFn(left, right);
-  }
-  return { kind: "symbolic", expr: exprFn(valueToExpr(left), valueToExpr(right)) };
-}
-
-function exactOrSymbolicUnary(
-  value: LosslessValue,
-  exactFn: (a: ComplexRational) => ComplexRational,
-  exprFn: (a: Expr) => Expr,
-): LosslessValue {
-  if (value.kind === "complex-rational") {
-    return exactFn(value);
-  }
-  return { kind: "symbolic", expr: exprFn(valueToExpr(value)) };
 }
 
 function isExactZeroValue(value: LosslessValue): boolean {
@@ -606,18 +660,18 @@ function matchEmlSub(expr: Expr): { left: Expr; right: Expr } | null {
 }
 
 function losslessNegValue(value: LosslessValue): LosslessValue {
-  return exactOrSymbolicUnary(value, complexNeg, neg);
+  return exactOrSymbolicUnary(value, complexNeg, exactNegExpr);
 }
 
 function losslessAddValue(left: LosslessValue, right: LosslessValue): LosslessValue {
-  return exactOrSymbolicBinary(left, right, complexAdd, add);
+  return exactOrSymbolicBinary(left, right, complexAdd, exactAddExpr);
 }
 
 function losslessSubValue(left: LosslessValue, right: LosslessValue): LosslessValue {
   if (exprEqualsValue(left, right)) {
     return exactComplex(rational(0n));
   }
-  return exactOrSymbolicBinary(left, right, complexSub, sub);
+  return exactOrSymbolicBinary(left, right, complexSub, exactSubExpr);
 }
 
 function losslessMulValue(left: LosslessValue, right: LosslessValue): LosslessValue {
@@ -628,7 +682,7 @@ function losslessMulValue(left: LosslessValue, right: LosslessValue): LosslessVa
   }
   if (isExactOneValue(left)) return right;
   if (isExactOneValue(right)) return left;
-  return exactOrSymbolicBinary(left, right, complexMul, mul);
+  return exactOrSymbolicBinary(left, right, complexMul, exactMulExpr);
 }
 
 function losslessDivValue(left: LosslessValue, right: LosslessValue): LosslessValue {
@@ -639,7 +693,7 @@ function losslessDivValue(left: LosslessValue, right: LosslessValue): LosslessVa
     return complexDiv(left, right);
   }
   if (isExactOneValue(right)) return left;
-  return exactOrSymbolicBinary(left, right, complexDiv, div);
+  return exactOrSymbolicBinary(left, right, complexDiv, exactDivExpr);
 }
 
 function losslessPowValue(base: LosslessValue, exponent: LosslessValue): LosslessValue {
@@ -660,7 +714,7 @@ function losslessPowValue(base: LosslessValue, exponent: LosslessValue): Lossles
       if (root) return root;
     }
   }
-  return { kind: "symbolic", expr: pow(valueToExpr(base), valueToExpr(exponent)) };
+  return { kind: "symbolic", expr: exactPowExpr(valueToExpr(base), valueToExpr(exponent)) };
 }
 
 function losslessExpValue(value: LosslessValue): LosslessValue {

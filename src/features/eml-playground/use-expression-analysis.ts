@@ -2,12 +2,12 @@ import {
   analyzeExpr,
   evaluate,
   evaluateLossless,
+  losslessToString,
   parse,
   reduceTokens,
   simplifyToElementary,
   toPureEml,
   toString,
-  valueToExpr,
   type Expr,
 } from "emlib";
 import { useDeferredValue, useMemo } from "react";
@@ -128,7 +128,7 @@ function evaluateExactly(
     return {
       exactOk: true,
       exactValue,
-      exactValueText: toString(valueToExpr(exactValue)),
+      exactValueText: losslessToString(exactValue),
       exactKind: exactValue.kind,
     };
   } catch (error) {
