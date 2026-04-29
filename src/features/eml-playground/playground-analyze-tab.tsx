@@ -53,7 +53,7 @@ export default function PlaygroundAnalyzeTab({ studio }: { studio: PlaygroundStu
               key={sample.expr}
               variant="outline"
               size="sm"
-              className="rounded-full border-[color:var(--line)] bg-white/84 px-2.5 text-[12px]"
+              className="rounded-full border-[color:var(--line)] bg-white/84 px-2.5 text-[0.75rem]"
               onClick={() => applySampleExpression(sample.expr)}
             >
               {sample.label}

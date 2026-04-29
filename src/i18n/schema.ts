@@ -50,8 +50,8 @@ export const baseMessages = {
   },
   hero: {
     pills: ["All elementary functions from a single operator", "Playground"],
-    titleLead: "EML as a",
-    titleAccent: "Generative Primitive",
+    titleLead: "One operator for all",
+    titleAccent: "Elementary Functions",
     description:
       "EML reduces elementary functions to one operator. emlib implements expression parsing, lowering, rewriting, evaluation, visualization, synthesis, and training.",
     paperNote: {

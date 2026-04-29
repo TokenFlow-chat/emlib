@@ -41,6 +41,9 @@ export interface ApproxComplex {
   im: number;
 }
 
+type UnaryExprNode = Extract<Expr, { value: Expr }>;
+type BinaryExprNode = Extract<Expr, { left: Expr; right: Expr }>;
+
 export const approxComplex = (re: number, im = 0): ApproxComplex => ({ re, im });
 const APPROX_ZERO = approxComplex(0);
 const APPROX_ONE = approxComplex(1);
@@ -490,12 +493,28 @@ function exactNegExpr(value: Expr): Expr {
 function exactAddExpr(left: Expr, right: Expr): Expr {
   if (isZero(left)) return right;
   if (isZero(right)) return left;
+  if (left.kind === "neg") return exactSubExpr(right, left.value);
+  if (right.kind === "neg") return exactSubExpr(left, right.value);
+  if (left.kind === "sub" && exprEquals(left.right, right)) return left.left;
+  if (right.kind === "sub" && exprEquals(right.right, left)) return right.left;
   return add(left, right);
 }
 
 function exactSubExpr(left: Expr, right: Expr): Expr {
   if (isZero(right)) return left;
   if (isZero(left)) return exactNegExpr(right);
+  if (exprEquals(left, right)) return num(0);
+  if (right.kind === "neg") return exactAddExpr(left, right.value);
+  if (left.kind === "add") {
+    if (exprEquals(left.left, right)) return left.right;
+    if (exprEquals(left.right, right)) return left.left;
+  }
+  if (right.kind === "add") {
+    if (exprEquals(left, right.left)) return exactNegExpr(right.right);
+    if (exprEquals(left, right.right)) return exactNegExpr(right.left);
+  }
+  if (right.kind === "sub" && exprEquals(left, right.left)) return right.right;
+  if (left.kind === "sub" && exprEquals(left.left, right)) return exactNegExpr(left.right);
   return sub(left, right);
 }
 
@@ -509,6 +528,7 @@ function exactMulExpr(left: Expr, right: Expr): Expr {
 
 function exactDivExpr(left: Expr, right: Expr): Expr {
   if (isOne(right)) return left;
+  if (isNegativeOne(right)) return exactNegExpr(left);
   return div(left, right);
 }
 
@@ -521,6 +541,13 @@ function exactImaginaryTerm(coefficient: Rational): Expr {
   if (rationalIsOne(coefficient)) return constant("i");
   if (coefficient.num === -coefficient.den) return exactNegExpr(constant("i"));
   return exactMulExpr(rationalToExpr(coefficient), constant("i"));
+}
+
+function exactTimesIExpr(value: LosslessValue): Expr {
+  if (value.kind === "complex-rational") {
+    return valueToExpr(exactComplex(rationalNeg(value.im), value.re));
+  }
+  return exactMulExpr(valueToExpr(value), constant("i"));
 }
 
 function exactOrSymbolicBinary(
@@ -546,6 +573,113 @@ function exactOrSymbolicUnary(
   return { kind: "symbolic", expr: exprFn(valueToExpr(value)) };
 }
 
+const simplifyLosslessExprCache = new WeakMap<Expr, Expr>();
+
+function exactUnaryExpr(kind: UnaryExprNode["kind"], value: Expr): Expr {
+  switch (kind) {
+    case "neg":
+      return exactNegExpr(value);
+    case "exp":
+      return isZero(value) ? num(1) : exp(value);
+    case "ln":
+      return isOne(value) ? num(0) : ln(value);
+    case "sqrt":
+      return isZero(value) || isOne(value) ? value : sqrt(value);
+    case "sin":
+    case "tan":
+    case "sinh":
+    case "tanh":
+    case "asin":
+    case "atan":
+    case "asinh":
+    case "atanh":
+      return isZero(value) ? num(0) : ({ kind, value } as Expr);
+    case "cos":
+    case "cosh":
+    case "sec":
+    case "sech":
+      return isZero(value) ? num(1) : ({ kind, value } as Expr);
+    case "acos":
+    case "acosh":
+      return isOne(value) ? num(0) : ({ kind, value } as Expr);
+    default:
+      return { kind, value } as Expr;
+  }
+}
+
+function exactBinaryExpr(kind: BinaryExprNode["kind"], left: Expr, right: Expr): Expr {
+  switch (kind) {
+    case "add":
+      return exactAddExpr(left, right);
+    case "sub":
+      return exactSubExpr(left, right);
+    case "mul":
+      return exactMulExpr(left, right);
+    case "div":
+      return exactDivExpr(left, right);
+    case "pow":
+      return exactPowExpr(left, right);
+    default:
+      return { kind, left, right } as Expr;
+  }
+}
+
+function simplifyLosslessExpr(expr: Expr): Expr {
+  const cached = simplifyLosslessExprCache.get(expr);
+  if (cached) return cached;
+
+  let result: Expr;
+  switch (expr.kind) {
+    case "num":
+    case "var":
+    case "const":
+      result = expr;
+      break;
+    case "neg":
+    case "exp":
+    case "ln":
+    case "sqrt":
+    case "sin":
+    case "cos":
+    case "tan":
+    case "cot":
+    case "sec":
+    case "csc":
+    case "sinh":
+    case "cosh":
+    case "tanh":
+    case "coth":
+    case "sech":
+    case "csch":
+    case "asin":
+    case "acos":
+    case "atan":
+    case "asec":
+    case "acsc":
+    case "acot":
+    case "asinh":
+    case "acosh":
+    case "atanh":
+      result = exactUnaryExpr(expr.kind, simplifyLosslessExpr(expr.value));
+      break;
+    case "eml":
+    case "add":
+    case "sub":
+    case "mul":
+    case "div":
+    case "pow":
+      result = exactBinaryExpr(
+        expr.kind,
+        simplifyLosslessExpr(expr.left),
+        simplifyLosslessExpr(expr.right),
+      );
+      break;
+  }
+
+  simplifyLosslessExprCache.set(expr, result);
+  return result;
+}
+
 export function valueToExpr(value: LosslessValue): Expr {
   if (value.kind === "symbolic") return value.expr;
   if (rationalIsZero(value.im)) return rationalToExpr(value.re);
@@ -563,8 +697,14 @@ export function rationalToExpr(value: Rational): Expr {
   return div(num(value.num), num(value.den));
 }
 
+export function simplifyLosslessValue(value: LosslessValue): LosslessValue {
+  if (value.kind === "complex-rational") return value;
+  const expr = simplifyLosslessExpr(value.expr);
+  return expr === value.expr ? value : { kind: "symbolic", expr };
+}
+
 export function losslessToString(value: LosslessValue): string {
-  return toString(valueToExpr(value));
+  return toString(valueToExpr(simplifyLosslessValue(value)));
 }
 
 export function losslessToApprox(value: LosslessValue): ApproxComplex {
@@ -584,9 +724,12 @@ function toComplexRationalInput(value: LosslessInput): ComplexRational | Symboli
   const re = toComplexRationalInput(value.re);
   const im = value.im === undefined ? exactComplex(rational(0n)) : toComplexRationalInput(value.im);
   if (re.kind === "symbolic" || im.kind === "symbolic") {
-    return { kind: "symbolic", expr: add(valueToExpr(re), mul(valueToExpr(im), constant("i"))) };
+    return {
+      kind: "symbolic",
+      expr: exactAddExpr(valueToExpr(re), exactTimesIExpr(im)),
+    };
   }
-  return exactComplex(re.re, im.re);
+  return exactComplex(rationalSub(re.re, im.im), rationalAdd(re.im, im.re));
 }
 
 function approxFromInput(value: LosslessInput): ApproxComplex | null {
@@ -608,8 +751,7 @@ function approxFromInput(value: LosslessInput): ApproxComplex | null {
   const re = approxFromInput(value.re);
   const im = value.im === undefined ? APPROX_ZERO : approxFromInput(value.im);
   if (!re || !im) return null;
-  if (im.im !== 0) return null;
-  return approxComplex(re.re, im.re);
+  return approxComplex(re.re - im.im, re.im + im.re);
 }
 
 function isExactZeroValue(value: LosslessValue): boolean {

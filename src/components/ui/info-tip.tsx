@@ -35,7 +35,7 @@ export function InfoTip({ label, className }: { label: string; className?: strin
   );
 
   const contentClassName =
-    "z-50 max-w-[18rem] rounded-[0.85rem] border border-[color:var(--line)] bg-[color:var(--paper-strong)] px-3 py-2 text-left text-[13px] leading-6 text-[color:var(--ink-soft)] [overflow-wrap:anywhere] shadow-[0_16px_40px_rgba(15,23,42,0.08)]";
+    "z-50 max-w-[18rem] rounded-[0.85rem] border border-[color:var(--line)] bg-[color:var(--paper-strong)] px-3 py-2 text-left text-[0.8125rem] leading-6 text-[color:var(--ink-soft)] [overflow-wrap:anywhere] shadow-[0_1rem_2.5rem_rgba(15,23,42,0.08)]";
 
   if (prefersTap) {
     return (

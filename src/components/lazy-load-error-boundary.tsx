@@ -14,26 +14,37 @@ type LazyLoadErrorBoundaryProps = {
 
 type LazyLoadErrorBoundaryState = {
   error: unknown;
+  prevResetKey: string | number;
 };
 
 export class LazyLoadErrorBoundary extends Component<
   LazyLoadErrorBoundaryProps,
   LazyLoadErrorBoundaryState
 > {
-  override state: LazyLoadErrorBoundaryState = { error: null };
+  constructor(props: LazyLoadErrorBoundaryProps) {
+    super(props);
+    this.state = { error: null, prevResetKey: props.resetKey };
+  }
 
-  static getDerivedStateFromError(error: unknown): LazyLoadErrorBoundaryState {
+  static getDerivedStateFromError(error: unknown): Partial<LazyLoadErrorBoundaryState> {
     return { error };
+  }
+
+  static getDerivedStateFromProps(
+    props: LazyLoadErrorBoundaryProps,
+    state: LazyLoadErrorBoundaryState,
+  ): Partial<LazyLoadErrorBoundaryState> | null {
+    if (props.resetKey === state.prevResetKey) {
+      return null;
+    }
+    if (state.error) {
+      return { error: null, prevResetKey: props.resetKey };
+    }
+    return { prevResetKey: props.resetKey };
   }
 
   override componentDidCatch(error: unknown, errorInfo: ErrorInfo) {
     console.error("Lazy component failed to load.", error, errorInfo);
-  }
-
-  override componentDidUpdate(previousProps: LazyLoadErrorBoundaryProps) {
-    if (previousProps.resetKey !== this.props.resetKey && this.state.error) {
-      this.setState({ error: null });
-    }
   }
 
   override render() {

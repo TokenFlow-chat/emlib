@@ -56,10 +56,10 @@ function NavLink({
       aria-label={label}
       target={external ? "_blank" : undefined}
       rel={external ? "noreferrer" : undefined}
-      className={`app-nav-link justify-center gap-2 max-[520px]:gap-0 ${active ? "app-nav-link-active" : ""}`}
+      className={`app-nav-link justify-center gap-2 max-[32.5rem]:gap-0 ${active ? "app-nav-link-active" : ""}`}
     >
       <Icon className="size-4" aria-hidden="true" />
-      <span className="max-[520px]:hidden">{label}</span>
+      <span className="max-[32.5rem]:hidden">{label}</span>
     </a>
   );
 }
@@ -88,7 +88,7 @@ export function AppNav({ hashSyncEnabled = true }: { hashSyncEnabled?: boolean }
               src={logoUrl}
               alt=""
               aria-hidden="true"
-              className="size-9 shrink-0 rounded-full border border-[color:var(--line)]/80 bg-black/92 p-1 shadow-[0_10px_24px_rgba(23,33,44,0.12)]"
+              className="size-9 shrink-0 rounded-full border border-[color:var(--line)]/80 bg-black/92 p-1 shadow-[0_0.625rem_1.5rem_rgba(23,33,44,0.12)]"
             />
             <span className="flex items-center pt-[0.02em] font-display text-[1.35rem] leading-none">
               {messages.app.title}

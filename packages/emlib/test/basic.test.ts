@@ -8,6 +8,7 @@ import {
   reduceTokens,
   reduceTokensString,
   reduceTypes,
+  simplifyLosslessValue,
   simplifyToElementary,
   simplifyToElementaryString,
   synthesizePureEml,
@@ -75,6 +76,38 @@ test("lossless value rendering keeps exact symbolic leftovers compact", () => {
 
   expect(losslessToString(evaluateLossless(parse("i")))).toBe("i");
   expect(losslessToString(evaluateLossless(parse("1 - 2*i")))).toBe("1-2*i");
+});
+
+test("lossless simplification prunes safe symbolic neutral operations", () => {
+  const cases = [
+    ["(exp(x)+1)-1", "exp(1/2)"],
+    ["(sin(1/3)-1)+1", "sin(1/3)"],
+    ["exp(x)/-1", "-exp(1/2)"],
+    ["(-exp(x))+exp(x)", "0"],
+  ] as const;
+
+  for (const [source, expected] of cases) {
+    const value = simplifyLosslessValue(evaluateLossless(parse(source), { x: 0.5 }));
+    expect(losslessToString(value)).toBe(expected);
+  }
+});
+
+test("lossless structured complex inputs compose exact real and imaginary parts", () => {
+  expect(
+    losslessToString(evaluateLossless(parse("z"), { z: { re: { re: 1, im: 2 }, im: 3 } })),
+  ).toBe("1+5*i");
+  expect(
+    losslessToString(
+      evaluateLossless(parse("z"), { z: { re: { re: 1, im: 2 }, im: { re: 3, im: 4 } } }),
+    ),
+  ).toBe("-3+5*i");
+  expect(
+    losslessToString(
+      evaluateLossless(parse("z"), {
+        z: { re: { kind: "symbolic", expr: parse("sin(1/3)") }, im: 0 },
+      }),
+    ),
+  ).toBe("sin(1/3)");
 });
 
 test("lossless evaluation keeps safe elementary identities exact", () => {

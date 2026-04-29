@@ -40,11 +40,11 @@ export function ResultCard({
     >
       <div className="flex items-start justify-between gap-2.5">
         <div className="min-w-0">
-          <div className="text-[10px] font-semibold tracking-[0.18em] text-[color:var(--ink-soft)] uppercase">
+          <div className="text-[0.625rem] font-semibold tracking-[0.18em] text-[color:var(--ink-soft)] uppercase">
             {copy.api}
           </div>
           <div className="mt-1 flex items-start gap-2">
-            <div className="min-w-0 text-[15px] font-semibold text-[color:var(--ink)]">
+            <div className="min-w-0 text-[0.9375rem] font-semibold text-[color:var(--ink)]">
               {copy.title}
             </div>
             <InfoTip label={`${copy.summary} ${copy.description}`} className="shrink-0" />

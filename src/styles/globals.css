@@ -19,10 +19,10 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 0.25rem);
+  --radius-md: calc(var(--radius) - 0.125rem);
   --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
+  --radius-xl: calc(var(--radius) + 0.25rem);
 }
 
 :root {
@@ -107,6 +107,18 @@ html {
   scroll-behavior: smooth;
 }
 
+@media (max-width: 639px) {
+  html {
+    font-size: 75%;
+  }
+}
+
+@media (max-width: 374px) {
+  html {
+    font-size: 60%;
+  }
+}
+
 main {
   width: 100%;
 }
@@ -115,5 +127,5 @@ main {
 section {
   /* 告诉浏览器非视口内容可以延迟渲染 */
   content-visibility: auto;
-  contain-intrinsic-size: 1px 500px;
+  contain-intrinsic-size: 0.0625rem 31.25rem;
 }

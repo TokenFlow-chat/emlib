@@ -31,8 +31,8 @@ export const zhCN = {
   },
   hero: {
     pills: ["所有初等函数的原子", "Playground"],
-    titleLead: "EML as a",
-    titleAccent: "Generative Primitive",
+    titleLead: "One operator for all",
+    titleAccent: "Elementary Functions",
     description:
       "EML 把初等函数简化为一个算子。emlib 实现了表达式的解析、lowering、重写、求值、可视化、合成和训练。",
     paperNote: {

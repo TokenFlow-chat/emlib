@@ -3,7 +3,7 @@ import { useI18n } from "@/i18n";
 
 function Pill({ children }: { children: string }) {
   return (
-    <span className="rounded-full border border-[color:var(--line)] bg-white/72 px-3 py-1 text-[10px] font-semibold tracking-[0.16em] text-[color:var(--ink-soft)] uppercase sm:text-[11px]">
+    <span className="rounded-full border border-[color:var(--line)] bg-white/72 px-3 py-1 text-[0.625rem] font-semibold tracking-[0.16em] text-[color:var(--ink-soft)] uppercase sm:text-[0.6875rem]">
       {children}
     </span>
   );
@@ -14,7 +14,7 @@ export default function HeroPanel() {
 
   return (
     <Card className="hero-panel overflow-hidden border-[color:var(--line-strong)]">
-      <CardContent className="grid items-start gap-5 px-5 py-6 sm:px-6 sm:py-7 xl:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)] xl:px-8 xl:py-8">
+      <CardContent className="grid items-start gap-5 px-5 py-6 sm:px-6 sm:py-7 xl:grid-cols-[minmax(0,1.15fr)_minmax(20rem,0.85fr)] xl:px-8 xl:py-8">
         <div className="min-w-0 space-y-4 sm:space-y-5">
           <div className="flex flex-wrap gap-2">
             {messages.hero.pills.map((pill) => (
@@ -28,7 +28,7 @@ export default function HeroPanel() {
                 {messages.hero.titleAccent}
               </span>
             </h1>
-            <p className="max-w-2xl text-[15px] leading-7 text-[color:var(--ink-soft)] sm:text-lg">
+            <p className="max-w-2xl text-[0.9375rem] leading-7 text-[color:var(--ink-soft)] sm:text-lg">
               {messages.hero.description}
             </p>
             <p className="max-w-2xl rounded-[0.9rem] border border-[color:var(--line)] bg-white/66 px-4 py-3 text-sm leading-6 text-[color:var(--ink-soft)]">
@@ -67,7 +67,7 @@ export default function HeroPanel() {
             ))}
           </div>
         </div>
-        <div className="min-w-0 space-y-4 rounded-[1.2rem] border border-[color:var(--line)] bg-[color:var(--paper-strong)] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.45)] sm:p-5">
+        <div className="min-w-0 space-y-4 rounded-[1.2rem] border border-[color:var(--line)] bg-[color:var(--paper-strong)] p-4 shadow-[inset_0_0.0625rem_0_rgba(255,255,255,0.45)] sm:p-5">
           <div className="flex items-center justify-between gap-3">
             <div>
               <div className="text-xs font-semibold tracking-[0.2em] text-[color:var(--ink-soft)] uppercase">

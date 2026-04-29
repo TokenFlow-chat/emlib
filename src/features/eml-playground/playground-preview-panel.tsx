@@ -47,7 +47,7 @@ export function PlaygroundPreviewPanel({ studio }: { studio: PlaygroundStudioSta
       <div className="diagram-shell overflow-hidden">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[color:var(--line)] px-3.5 py-3">
           <div>
-            <div className="text-[10px] font-semibold tracking-[0.18em] text-[color:var(--ink-soft)] uppercase">
+            <div className="text-[0.625rem] font-semibold tracking-[0.18em] text-[color:var(--ink-soft)] uppercase">
               {playground.diagram.eyebrow}
             </div>
           </div>

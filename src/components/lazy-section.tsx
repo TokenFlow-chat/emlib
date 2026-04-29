@@ -10,10 +10,7 @@ import {
   useState,
 } from "react";
 
-import {
-  LazyLoadErrorBoundary,
-  LazyLoadFailure,
-} from "@/components/lazy-load-error-boundary";
+import { LazyLoadErrorBoundary, LazyLoadFailure } from "@/components/lazy-load-error-boundary";
 
 export type LazyComponentLoader = () => Promise<{ default: ComponentType }>;
 

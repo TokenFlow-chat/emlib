@@ -9,10 +9,10 @@ import { cn } from "@/lib/utils";
 export function StatPill({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-[0.8rem] border border-[color:var(--line)] bg-white/78 px-2.5 py-1.5">
-      <div className="text-[10px] font-semibold tracking-[0.16em] text-[color:var(--ink-soft)] uppercase">
+      <div className="text-[0.625rem] font-semibold tracking-[0.16em] text-[color:var(--ink-soft)] uppercase">
         {label}
       </div>
-      <div className="mt-0.5 text-[13px] font-semibold text-[color:var(--ink)]">{value}</div>
+      <div className="mt-0.5 text-[0.8125rem] font-semibold text-[color:var(--ink)]">{value}</div>
     </div>
   );
 }
@@ -95,7 +95,7 @@ export function ExperimentShell({
             {icon}
           </div>
           <div className="min-w-0">
-            <div className="text-[11px] font-semibold tracking-[0.18em] text-[color:var(--ink-soft)] uppercase">
+            <div className="text-[0.6875rem] font-semibold tracking-[0.18em] text-[color:var(--ink-soft)] uppercase">
               {eyebrow}
             </div>
             <div className="mt-1 text-base font-semibold text-[color:var(--ink)]">{title}</div>
@@ -154,7 +154,7 @@ export function SegmentedTabs<T extends string>({
             variant="ghost"
             size="sm"
             className={cn(
-              "min-w-0 flex-1 rounded-[0.75rem] px-2.5 text-[12px] text-[color:var(--ink-soft)]",
+              "min-w-0 flex-1 rounded-[0.75rem] px-2.5 text-[0.75rem] text-[color:var(--ink-soft)]",
               active && "bg-white text-[color:var(--ink)] shadow-sm",
             )}
             onClick={() => onChange(item.value)}

@@ -50,10 +50,10 @@ export function PlaygroundStudio() {
     <Card className="paper-card border-[color:var(--line-strong)] py-3.5 sm:py-4.5 gap-0">
       <CardHeader className="gap-2 border-b border-[color:var(--line)]/70 px-4 pb-3.5 sm:px-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="text-[11px] font-semibold tracking-[0.18em] text-[color:var(--ink-soft)] uppercase">
+          <div className="text-[0.6875rem] font-semibold tracking-[0.18em] text-[color:var(--ink-soft)] uppercase">
             {playground.eyebrow}
           </div>
-          <div className="text-[11px] text-[color:var(--ink-soft)]">{playground.badge}</div>
+          <div className="text-[0.6875rem] text-[color:var(--ink-soft)]">{playground.badge}</div>
         </div>
         <div className="flex items-center justify-between gap-3">
           <CardTitle className="font-display text-3xl text-[color:var(--ink)]">

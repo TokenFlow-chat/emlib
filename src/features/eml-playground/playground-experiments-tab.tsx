@@ -205,7 +205,7 @@ export default function PlaygroundExperimentsTab({ studio }: { studio: Playgroun
                 type="button"
                 variant="outline"
                 size="sm"
-                className="rounded-full border-[color:var(--line)] bg-[color:var(--paper-strong)] px-2.5 text-[12px]"
+                className="rounded-full border-[color:var(--line)] bg-[color:var(--paper-strong)] px-2.5 text-[0.75rem]"
                 onClick={() => applySynthTarget(sample.expr)}
               >
                 {sample.label}
@@ -215,7 +215,7 @@ export default function PlaygroundExperimentsTab({ studio }: { studio: Playgroun
               type="button"
               variant="outline"
               size="sm"
-              className="rounded-full border-[color:var(--line)] bg-[color:var(--paper-strong)] px-2.5 text-[12px]"
+              className="rounded-full border-[color:var(--line)] bg-[color:var(--paper-strong)] px-2.5 text-[0.75rem]"
               onClick={() => applySynthTarget(expression)}
             >
               {playground.experiments.synthesis.useCurrent}

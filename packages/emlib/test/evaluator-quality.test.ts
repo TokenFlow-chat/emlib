@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { cMul, desugarElementary, evaluate, parse } from "../src/index";
+import { cMul, createApproxEvaluator, desugarElementary, evaluate, parse } from "../src/index";
 
 type RealUnaryCase = {
   expr: string;
@@ -108,6 +108,16 @@ test("evaluate keeps principal complex sqrt stable on representative samples", (
       expect(root.im).toBeGreaterThanOrEqual(-1e-12);
     }
   }
+});
+
+test("approx evaluator composes structured complex inputs as re + i*im", () => {
+  const evaluateNode = createApproxEvaluator({
+    z: { re: { re: 1, im: 2 }, im: { re: 3, im: 4 } },
+  });
+
+  const value = evaluateNode(parse("z"));
+  expect(value.re).toBeCloseTo(-3, 12);
+  expect(value.im).toBeCloseTo(5, 12);
 });
 
 test("direct approximate evaluation stays faster than evaluating the desugared AST", () => {
