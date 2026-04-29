@@ -13,7 +13,11 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { AsyncMessage, MetricCard, StatPill } from "@/features/eml-playground/playground-shared";
-import { type DiagramSource, type LayoutMode } from "@/features/eml-playground/constants";
+import {
+  type DiagramSource,
+  type DedupMode,
+  type LayoutMode,
+} from "@/features/eml-playground/constants";
 import type { PlaygroundStudioState } from "@/features/eml-playground/use-playground-studio";
 import {
   defaultValueForVariable,
@@ -35,6 +39,8 @@ export default function PlaygroundAnalyzeTab({ studio }: { studio: PlaygroundStu
     setEnvValues,
     diagramSource,
     setDiagramSource,
+    dedupMode,
+    setDedupMode,
     layoutMode,
     setLayoutMode,
   } = studio;
@@ -111,6 +117,25 @@ export default function PlaygroundAnalyzeTab({ studio }: { studio: PlaygroundStu
                   <SelectItem value="lifted">
                     {playground.controls.diagramSourceOptions.lifted}
                   </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-[color:var(--ink)]">{playground.controls.dedupLabel}</Label>
+              <Select value={dedupMode} onValueChange={(value) => setDedupMode(value as DedupMode)}>
+                <SelectTrigger
+                  size="sm"
+                  className="w-full rounded-[0.75rem] border-[color:var(--line)] bg-[color:var(--paper-strong)]"
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">{playground.controls.dedupOptions.none}</SelectItem>
+                  <SelectItem value="compound">
+                    {playground.controls.dedupOptions.compound}
+                  </SelectItem>
+                  <SelectItem value="all">{playground.controls.dedupOptions.all}</SelectItem>
                 </SelectContent>
               </Select>
             </div>

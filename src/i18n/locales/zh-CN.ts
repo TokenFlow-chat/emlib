@@ -172,6 +172,12 @@ export const zhCN = {
         shortest: "最短写法",
         lifted: "回升表达式",
       },
+      dedupLabel: "去重模式",
+      dedupOptions: {
+        all: "全部节点",
+        compound: "仅复合节点",
+        none: "无（完整树）",
+      },
       layoutLabel: "D2 布局",
       previewHintLabel: "预览方式",
       previewHint:

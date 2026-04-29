@@ -45,8 +45,27 @@ bun run test
 
 ### Visualization and analysis
 
-- `exprToD2(expr, options?)` exports a D2 expression tree
+- `exprToD2(expr, options?)` exports a D2 expression tree (DAG when deduplication is enabled)
 - `countTokens(expr)`, `countTypes(expr)`, `collectVariables(expr)`, and related helpers are also exported
+- `countUniqueSubtrees(expr)` returns the number of distinct structural subtrees
+- `countTotalNodes(expr)` returns the total node count (tree traversal, no deduplication)
+
+#### `exprToD2` options
+
+```ts
+type DedupMode = "all" | "compound" | "none";
+
+interface D2ExportOptions {
+  nodePrefix?: string; // default: "n"
+  edgeLabels?: boolean; // default: true (affects sub/div/pow edges only)
+  deduplicate?: boolean | DedupMode; // default: "none"
+}
+```
+
+- `deduplicate: 'all'` — shares every structurally identical node including leaves
+- `deduplicate: 'compound'` — shares only compound subtrees (>1 node), leaves remain separate
+- `deduplicate: 'none'` — renders as a full tree with no sharing
+- Edge labels are omitted for commutative operators (add, mul, eml) and all unary ops.
 
 ### Experimental APIs
 

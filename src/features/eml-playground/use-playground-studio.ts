@@ -16,6 +16,7 @@ import { startTransition, useEffect, useMemo, useRef, useState } from "react";
 import {
   PURE_RENDER_LIMIT,
   type CompressionMode,
+  type DedupMode,
   type DiagramSource,
   type LayoutMode,
   type MasterPresetId,
@@ -150,6 +151,7 @@ export function usePlaygroundStudio() {
   const [expression, setExpression] = useState(initialUrlState.expression);
   const [diagramSource, setDiagramSource] = useState<DiagramSource>(initialUrlState.diagramSource);
   const [layoutMode, setLayoutMode] = useState<LayoutMode>(initialUrlState.layoutMode);
+  const [dedupMode, setDedupMode] = useState<DedupMode>(initialUrlState.dedupMode);
   const [envValues, setEnvValues] = useState<Record<string, string>>(initialUrlState.envValues);
   const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">("idle");
   const [compressionMode, setCompressionMode] = useState<CompressionMode>(
@@ -184,6 +186,7 @@ export function usePlaygroundStudio() {
       expression,
       diagramSource,
       layoutMode,
+      dedupMode,
       envValues,
       compressionMode,
       synthTarget,
@@ -206,6 +209,9 @@ export function usePlaygroundStudio() {
       );
       setLayoutMode((previous) =>
         previous === nextState.layoutMode ? previous : nextState.layoutMode,
+      );
+      setDedupMode((previous) =>
+        previous === nextState.dedupMode ? previous : nextState.dedupMode,
       );
       setEnvValues((previous) => {
         const previousJson = JSON.stringify(previous);
@@ -301,7 +307,9 @@ export function usePlaygroundStudio() {
       };
     }
 
-    const d2Source = withTransparentD2Background(exprToD2(selectedView.transform.expr));
+    const d2Source = withTransparentD2Background(
+      exprToD2(selectedView.transform.expr, { deduplicate: dedupMode }),
+    );
 
     if (selectedView.transform.metrics.tokenCount > PURE_RENDER_LIMIT) {
       return {
@@ -320,7 +328,7 @@ export function usePlaygroundStudio() {
       reason: null,
       d2Source,
     };
-  }, [analysisState, formatNumber, playgroundMessages, selectedView]);
+  }, [analysisState, formatNumber, playgroundMessages, selectedView, dedupMode]);
 
   const d2Preview = useD2Preview({
     active: previewActivation.isActivated,
@@ -483,6 +491,8 @@ export function usePlaygroundStudio() {
     setDiagramSource,
     layoutMode,
     setLayoutMode,
+    dedupMode,
+    setDedupMode,
     envValues,
     setEnvValues,
     copyState,

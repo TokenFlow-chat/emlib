@@ -93,7 +93,7 @@ All playground UI lives under `src/features/eml-playground/`. Components (`playg
 
 ### D2 WASM lazy loading
 
-`useD2Preview` uses `IntersectionObserver` with `280px` `rootMargin` — the `@terrastruct/d2` WASM module only loads when the preview panel is near the viewport. Rendering is disabled when the AST exceeds 10,000 nodes. SVGs are sanitized (scripts, event handlers, unsafe hrefs stripped) and served as blob URLs.
+`useD2Preview` uses `IntersectionObserver` with `280px` `rootMargin` — the `@terrastruct/d2` WASM module only loads when the preview panel is near the viewport. SVGs are sanitized (scripts, event handlers, unsafe hrefs stripped) and served as blob URLs.
 
 ### URL state sync
 

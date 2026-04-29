@@ -2,12 +2,14 @@ import { useEffect, useRef } from "react";
 
 import {
   DEFAULT_COMPRESSION_MODE,
+  DEFAULT_DEDUP_MODE,
   DEFAULT_EXPRESSION,
   DEFAULT_MASTER_PRESET,
   DEFAULT_SYNTH_BEAM_WIDTH,
   DEFAULT_SYNTH_MAX_LEAVES,
   DEFAULT_SYNTH_TARGET,
   type CompressionMode,
+  type DedupMode,
   type DiagramSource,
   type LayoutMode,
   type MasterPresetId,
@@ -20,6 +22,7 @@ export type PlaygroundUrlState = {
   expression: string;
   diagramSource: DiagramSource;
   layoutMode: LayoutMode;
+  dedupMode: DedupMode;
   envValues: Record<string, string>;
   compressionMode: CompressionMode;
   synthTarget: string;
@@ -34,6 +37,7 @@ const queryKeys = {
   expression: "expr",
   diagramSource: "view",
   layoutMode: "layout",
+  dedupMode: "dedup",
   envValues: "vars",
   compressionMode: "compression",
   synthTarget: "target",
@@ -59,6 +63,7 @@ const diagramSources = [
   "lifted",
 ] as const satisfies readonly DiagramSource[];
 const layoutModes = ["dagre", "elk"] as const satisfies readonly LayoutMode[];
+const dedupModes = ["all", "compound", "none"] as const satisfies readonly DedupMode[];
 const compressionModes = [
   "light",
   "medium",
@@ -72,6 +77,7 @@ const defaultPlaygroundUrlState: PlaygroundUrlState = {
   expression: DEFAULT_EXPRESSION,
   diagramSource: "pure",
   layoutMode: "dagre",
+  dedupMode: DEFAULT_DEDUP_MODE,
   envValues: {
     x: "0.5",
     y: "2",
@@ -153,6 +159,7 @@ export function readPlaygroundUrlState(search = getLocationSearch()): Playground
   const experimentTab = params.get(queryKeys.experimentTab);
   const diagramSource = params.get(queryKeys.diagramSource);
   const layoutMode = params.get(queryKeys.layoutMode);
+  const dedupMode = params.get(queryKeys.dedupMode);
   const compressionMode = params.get(queryKeys.compressionMode);
   const masterPresetId = params.get(queryKeys.masterPresetId);
 
@@ -170,6 +177,7 @@ export function readPlaygroundUrlState(search = getLocationSearch()): Playground
     layoutMode: isOneOf(layoutMode, layoutModes)
       ? layoutMode
       : defaultPlaygroundUrlState.layoutMode,
+    dedupMode: isOneOf(dedupMode, dedupModes) ? dedupMode : defaultPlaygroundUrlState.dedupMode,
     envValues:
       parseStringRecord(params.get(queryKeys.envValues)) ?? defaultPlaygroundUrlState.envValues,
     compressionMode: isOneOf(compressionMode, compressionModes)
@@ -225,6 +233,7 @@ function buildPlaygroundUrl(state: PlaygroundUrlState): string {
     state.layoutMode,
     defaultPlaygroundUrlState.layoutMode,
   );
+  setQueryParam(params, queryKeys.dedupMode, state.dedupMode, defaultPlaygroundUrlState.dedupMode);
   setQueryParam(params, queryKeys.envValues, state.envValues, defaultPlaygroundUrlState.envValues);
   setQueryParam(
     params,

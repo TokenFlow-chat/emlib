@@ -172,6 +172,12 @@ export const enUS = {
         shortest: "Shortest form",
         lifted: "Lifted form",
       },
+      dedupLabel: "Deduplication",
+      dedupOptions: {
+        all: "All nodes",
+        compound: "Compound only",
+        none: "None (full tree)",
+      },
       layoutLabel: "D2 layout",
       previewHintLabel: "Preview",
       previewHint:
