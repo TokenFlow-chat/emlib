@@ -1,15 +1,19 @@
 import { createContext, type ReactNode, useContext, useEffect, useMemo, useState } from "react";
 
-import { zhCN } from "@/i18n/locales/zh-CN";
-import { baseMessages, LOCALES, type Locale, type MessageDictionary } from "@/i18n/schema";
+import { enUS } from "@/i18n/locales/en-US";
+import { LOCALES, type Locale, type MessageDictionary } from "@/i18n/schema";
 
 const STORAGE_KEY = "eml.locale";
-const DEFAULT_LOCALE: Locale = "zh-CN";
+const DEFAULT_LOCALE: Locale = "en-US";
 
-const dictionaries = {
-  "zh-CN": zhCN,
-  "en-US": baseMessages,
-} satisfies Record<Locale, MessageDictionary>;
+const defaultMessages = enUS as unknown as MessageDictionary;
+
+const lazyLoaders: Partial<Record<Locale, () => Promise<MessageDictionary>>> = {
+  "zh-CN": async () => {
+    const mod = (await import("@/i18n/locales/zh-CN")) satisfies { zhCN: MessageDictionary };
+    return mod.zhCN;
+  },
+};
 
 function isLocale(value: string): value is Locale {
   return LOCALES.includes(value as Locale);
@@ -56,7 +60,19 @@ const I18nContext = createContext<I18nContextValue | null>(null);
 
 export function I18nProvider({ children }: { children: ReactNode }) {
   const [locale, setLocale] = useState<Locale>(() => detectInitialLocale());
-  const messages = dictionaries[locale];
+  const [lazyDicts, setLazyDicts] = useState<Partial<Record<Locale, MessageDictionary>>>({});
+
+  useEffect(() => {
+    const loader = lazyLoaders[locale];
+    if (!loader || lazyDicts[locale]) return;
+
+    loader().then((dict) => {
+      setLazyDicts((prev) => ({ ...prev, [locale]: dict }));
+    });
+  }, [locale, lazyDicts]);
+
+  const messages =
+    locale === DEFAULT_LOCALE ? defaultMessages : (lazyDicts[locale] ?? defaultMessages);
 
   useEffect(() => {
     try {

@@ -30,7 +30,7 @@ export const zhCN = {
     },
   },
   hero: {
-    pills: ["所有初等函数的原子", "Playground"],
+    pills: ["初等函数的原子", "EML在线演示"],
     titleLead: "One operator for all",
     titleAccent: "Elementary Functions",
     description:
