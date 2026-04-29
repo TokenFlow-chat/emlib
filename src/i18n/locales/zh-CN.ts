@@ -23,6 +23,11 @@ export const zhCN = {
     emptyStates: {
       tabs: "暂无可用选项。",
     },
+    lazyLoadError: {
+      title: "组件加载失败。",
+      description: "请检查网络后重试这个区域。",
+      retry: "重新加载",
+    },
   },
   hero: {
     pills: ["所有初等函数的原子", "Playground"],

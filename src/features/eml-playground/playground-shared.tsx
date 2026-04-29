@@ -1,6 +1,7 @@
 import { type ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
+import { LazyLoadFailure } from "@/components/lazy-load-error-boundary";
 import { LoadingMark } from "@/components/ui/loading-mark";
 import { useI18n } from "@/i18n";
 import { cn } from "@/lib/utils";
@@ -171,6 +172,14 @@ export function PlaygroundTabFallback() {
   return (
     <div className="flex min-h-80 items-center justify-center rounded-[1rem] border border-[color:var(--line)] bg-white/50">
       <LoadingMark />
+    </div>
+  );
+}
+
+export function PlaygroundTabLoadError({ onRetry }: { onRetry: () => void }) {
+  return (
+    <div className="flex min-h-80 items-center justify-center rounded-[1rem] border border-[color:var(--line)] bg-white/50 px-4">
+      <LazyLoadFailure onRetry={onRetry} />
     </div>
   );
 }

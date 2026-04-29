@@ -1,28 +1,50 @@
 import {
   type ComponentType,
-  type LazyExoticComponent,
   type ReactNode,
+  lazy,
   Suspense,
+  useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
 
+import {
+  LazyLoadErrorBoundary,
+  LazyLoadFailure,
+} from "@/components/lazy-load-error-boundary";
+
+export type LazyComponentLoader = () => Promise<{ default: ComponentType }>;
+
+function createLazyComponent(load: LazyComponentLoader, retryToken: number) {
+  void retryToken;
+  return lazy(load);
+}
+
 type LazySectionProps = {
-  component: LazyExoticComponent<ComponentType>;
+  load: LazyComponentLoader;
   eager?: boolean;
+  errorFallback?: (retry: () => void) => ReactNode;
   fallback: ReactNode;
   rootMargin?: string;
 };
 
 export function LazySection({
-  component: Component,
+  load,
   eager = false,
+  errorFallback,
   fallback,
   rootMargin = "320px 0px",
 }: LazySectionProps) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const [shouldLoad, setShouldLoad] = useState(eager);
+  const [loadAttempt, setLoadAttempt] = useState(0);
+  const Component = useMemo(() => createLazyComponent(load, loadAttempt), [load, loadAttempt]);
+  const retry = useCallback(() => {
+    setShouldLoad(true);
+    setLoadAttempt((attempt) => attempt + 1);
+  }, []);
 
   useEffect(() => {
     if (shouldLoad || eager || !hostRef.current) return;
@@ -43,9 +65,15 @@ export function LazySection({
   return (
     <div ref={hostRef}>
       {shouldLoad ? (
-        <Suspense fallback={fallback}>
-          <Component />
-        </Suspense>
+        <LazyLoadErrorBoundary
+          resetKey={loadAttempt}
+          onRetry={retry}
+          fallback={errorFallback ?? ((retryLoad) => <LazyLoadFailure onRetry={retryLoad} />)}
+        >
+          <Suspense fallback={fallback}>
+            <Component />
+          </Suspense>
+        </LazyLoadErrorBoundary>
       ) : (
         fallback
       )}

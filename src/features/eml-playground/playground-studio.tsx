@@ -1,38 +1,50 @@
-import { lazy, Suspense, useEffect } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState, type ComponentType } from "react";
 
+import { LazyLoadErrorBoundary } from "@/components/lazy-load-error-boundary";
 import { InfoTip } from "@/components/ui/info-tip";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PlaygroundPreviewPanel } from "@/features/eml-playground/playground-preview-panel";
-import { PlaygroundTabFallback, SegmentedTabs } from "@/features/eml-playground/playground-shared";
-import { usePlaygroundStudio } from "@/features/eml-playground/use-playground-studio";
+import {
+  PlaygroundTabFallback,
+  PlaygroundTabLoadError,
+  SegmentedTabs,
+} from "@/features/eml-playground/playground-shared";
+import {
+  usePlaygroundStudio,
+  type PlaygroundStudioState,
+  type WorkspaceTab,
+} from "@/features/eml-playground/use-playground-studio";
 import { useMessages } from "@/i18n";
 
-const AnalyzeTab = lazy(() => import("@/features/eml-playground/playground-analyze-tab"));
-const CompareTab = lazy(() => import("@/features/eml-playground/playground-compare-tab"));
-const ExperimentsTab = lazy(() => import("@/features/eml-playground/playground-experiments-tab"));
+type PlaygroundTabLoader = () => Promise<{
+  default: ComponentType<{ studio: PlaygroundStudioState }>;
+}>;
 
-const tabLoaders = {
+const tabLoaders: Record<WorkspaceTab, PlaygroundTabLoader> = {
   analyze: () => import("@/features/eml-playground/playground-analyze-tab"),
   compare: () => import("@/features/eml-playground/playground-compare-tab"),
   experiments: () => import("@/features/eml-playground/playground-experiments-tab"),
-} as const;
+};
+
+function createLazyTab(load: PlaygroundTabLoader, retryToken: number) {
+  void retryToken;
+  return lazy(load);
+}
 
 export function PlaygroundStudio() {
   const studio = usePlaygroundStudio();
   const { workspaceTab, setWorkspaceTab } = studio;
   const playground = useMessages((messages) => messages.playground);
   const showPreviewPanel = workspaceTab !== "experiments";
+  const [tabLoadAttempt, setTabLoadAttempt] = useState(0);
+  const ActiveTab = useMemo(
+    () => createLazyTab(tabLoaders[workspaceTab], tabLoadAttempt),
+    [workspaceTab, tabLoadAttempt],
+  );
 
   useEffect(() => {
-    void tabLoaders[workspaceTab]();
+    tabLoaders[workspaceTab]().catch(() => {});
   }, [workspaceTab]);
-
-  const ActiveTab =
-    workspaceTab === "analyze"
-      ? AnalyzeTab
-      : workspaceTab === "compare"
-        ? CompareTab
-        : ExperimentsTab;
 
   return (
     <Card className="paper-card border-[color:var(--line-strong)] py-3.5 sm:py-4.5 gap-0">
@@ -79,9 +91,15 @@ export function PlaygroundStudio() {
                 },
               ]}
             />
-            <Suspense fallback={<PlaygroundTabFallback />}>
-              <ActiveTab studio={studio} />
-            </Suspense>
+            <LazyLoadErrorBoundary
+              resetKey={`${workspaceTab}:${tabLoadAttempt}`}
+              onRetry={() => setTabLoadAttempt((attempt) => attempt + 1)}
+              fallback={(retry) => <PlaygroundTabLoadError onRetry={retry} />}
+            >
+              <Suspense fallback={<PlaygroundTabFallback />}>
+                <ActiveTab studio={studio} />
+              </Suspense>
+            </LazyLoadErrorBoundary>
           </div>
           {showPreviewPanel ? <PlaygroundPreviewPanel studio={studio} /> : null}
         </div>

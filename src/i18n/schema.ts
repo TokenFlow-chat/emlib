@@ -42,6 +42,11 @@ export const baseMessages = {
     emptyStates: {
       tabs: "No options available.",
     },
+    lazyLoadError: {
+      title: "Component failed to load.",
+      description: "Check your connection and retry this section.",
+      retry: "Reload",
+    },
   },
   hero: {
     pills: ["All elementary functions from a single operator", "Playground"],
