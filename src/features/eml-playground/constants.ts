@@ -23,7 +23,8 @@ export const DEFAULT_SYNTH_MAX_LEAVES = 7;
 export const DEFAULT_SYNTH_BEAM_WIDTH = 128;
 export const DEFAULT_COMPRESSION_MODE: CompressionMode = "medium";
 export const DEFAULT_MASTER_PRESET: MasterPresetId = "exp";
-export const DEFAULT_DEDUP_MODE: DedupMode = "none";
+export const DEFAULT_DEDUP_MODE: DedupMode = "all";
+export const DEFAULT_LAYOUT_MODE: LayoutMode = "free";
 export const SYNTH_MAX_LEAF_OPTIONS = [5, 7, 9, 11] as const;
 export const SYNTH_BEAM_WIDTH_OPTIONS = [64, 128, 256, 384] as const;
 

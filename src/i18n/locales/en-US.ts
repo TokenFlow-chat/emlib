@@ -293,7 +293,6 @@ export const enUS = {
         { label: "operator", tone: "operator" },
         { label: "variable", tone: "variable" },
         { label: "constant", tone: "constant" },
-        { label: "shared", tone: "shared" },
       ],
       edgeLegend: [
         { label: "value", tone: "value" },

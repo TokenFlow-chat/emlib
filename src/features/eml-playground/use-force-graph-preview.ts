@@ -11,7 +11,6 @@ type ForceGraphNode = SerializedExprNode & {
   name: string;
   val: number;
   color: string;
-  textColor: string;
   x?: number;
   y?: number;
   z?: number;
@@ -77,9 +76,6 @@ export function usePreviewActivation<T extends Element>() {
 }
 
 function baseNodeColor(node: SerializedExprNode): string {
-  if (node.id === "n0") return "#263238";
-  if (node.repeated) return "#6b5aa6";
-
   switch (node.role) {
     case "operator":
       return "#2f7d8c";
@@ -87,22 +83,6 @@ function baseNodeColor(node: SerializedExprNode): string {
       return "#b9783b";
     case "constant":
       return "#a84f6a";
-    default:
-      return "#52616b";
-  }
-}
-
-function nodeTextColor(node: SerializedExprNode): string {
-  if (node.id === "n0") return "#1c2730";
-  if (node.repeated) return "#55458d";
-
-  switch (node.role) {
-    case "operator":
-      return "#236775";
-    case "variable":
-      return "#8f5b2e";
-    case "constant":
-      return "#874157";
     default:
       return "#52616b";
   }
@@ -128,7 +108,7 @@ function linkWidth(link: SerializedExprLink): number {
 function linkCurvature(link: SerializedExprLink): number {
   if (link.argument === "left") return -0.16;
   if (link.argument === "right") return 0.16;
-  return 0.035;
+  return 0.0;
 }
 
 function linkParticles(link: SerializedExprLink): number {
@@ -161,7 +141,6 @@ function toForceGraphData(graph: SerializedExprGraph): ForceGraphData {
       name: nodeTooltip(node),
       val: node.role === "operator" ? 3 + node.arity : 2 + (node.repeated ? 0.9 : 0),
       color: baseNodeColor(node),
-      textColor: nodeTextColor(node),
     })),
     links: graph.links.map((link) => ({
       ...link,
@@ -182,7 +161,7 @@ const labelTextureCache = new Map<string, CanvasTexture>();
 
 function createTextSprite(node: ForceGraphNode): Object3D {
   const text = node.label.length > 16 ? `${node.label.slice(0, 15)}...` : node.label;
-  const cacheKey = `${text}:${node.textColor}:${node.repeated}`;
+  const cacheKey = `${text};`;
   let texture = labelTextureCache.get(cacheKey);
 
   if (!texture) {
@@ -213,19 +192,9 @@ function createTextSprite(node: ForceGraphNode): Object3D {
     canvas.height = Math.ceil(height * ratio);
 
     context.scale(ratio, ratio);
-    context.font = `700 ${fontSize}px ui-monospace, SFMono-Regular, Menlo, monospace`;
+    context.font = `500 ${fontSize}px ui-monospace, SFMono-Regular, Menlo, monospace`;
     context.textBaseline = "middle";
-    context.lineJoin = "round";
-    context.fillStyle = "rgba(255,255,255,0.86)";
-    context.strokeStyle = node.repeated ? "rgba(107,90,166,0.5)" : "rgba(68,88,94,0.22)";
-    context.lineWidth = 2;
-
-    const radius = height / 2;
-    context.beginPath();
-    context.roundRect(1, 1, width - 2, height - 2, radius);
-    context.fill();
-    context.stroke();
-    context.fillStyle = node.textColor;
+    context.fillStyle = "#fff";
     context.fillText(text, horizontalPadding, height / 2 + 1);
 
     texture = new CanvasTexture(canvas);
@@ -388,7 +357,7 @@ export function useForceGraphPreview({
           .linkDirectionalArrowColor((link) => link.color)
           .linkDirectionalArrowRelPos(0.94)
           .linkDirectionalArrowResolution(8)
-          .linkDirectionalParticles(() => 0)
+          .linkDirectionalParticles((link) => link.particles)
           .linkDirectionalParticleSpeed((link) => link.particleSpeed)
           .linkDirectionalParticleWidth((link) => (link.argument === "value" ? 0.85 : 1.45))
           .linkDirectionalParticleColor((link) => link.color)

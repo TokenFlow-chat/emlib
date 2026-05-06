@@ -366,10 +366,6 @@
     background: #a84f6a;
   }
 
-  .force-graph-legend-dot.shared {
-    background: #6b5aa6;
-  }
-
   .force-graph-legend-divider {
     width: 0.0625rem;
     min-height: 0.85rem;

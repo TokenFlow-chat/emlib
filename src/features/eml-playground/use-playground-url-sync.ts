@@ -4,6 +4,7 @@ import {
   DEFAULT_COMPRESSION_MODE,
   DEFAULT_DEDUP_MODE,
   DEFAULT_EXPRESSION,
+  DEFAULT_LAYOUT_MODE,
   DEFAULT_MASTER_PRESET,
   DEFAULT_SYNTH_BEAM_WIDTH,
   DEFAULT_SYNTH_MAX_LEAVES,
@@ -76,7 +77,7 @@ const defaultPlaygroundUrlState: PlaygroundUrlState = {
   experimentTab: "compression",
   expression: DEFAULT_EXPRESSION,
   diagramSource: "pure",
-  layoutMode: "radial",
+  layoutMode: DEFAULT_LAYOUT_MODE,
   dedupMode: DEFAULT_DEDUP_MODE,
   envValues: {
     x: "0.5",

@@ -290,7 +290,6 @@ export const zhCN = {
         { label: "算子", tone: "operator" },
         { label: "变量", tone: "variable" },
         { label: "常量", tone: "constant" },
-        { label: "共享", tone: "shared" },
       ],
       edgeLegend: [
         { label: "value 边", tone: "value" },

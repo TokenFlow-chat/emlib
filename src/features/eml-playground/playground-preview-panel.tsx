@@ -123,7 +123,11 @@ export function PlaygroundPreviewPanel({ studio }: { studio: PlaygroundStudioSta
               isExpanded ? playground.diagram.collapseButton : playground.diagram.expandButton
             }
           >
-            {isExpanded ? <LuMinimize2 className="size-3.5" /> : <LuMaximize2 className="size-3.5" />}
+            {isExpanded ? (
+              <LuMinimize2 className="size-3.5" />
+            ) : (
+              <LuMaximize2 className="size-3.5" />
+            )}
             {isExpanded ? playground.diagram.collapseButton : playground.diagram.expandButton}
           </Button>
           <Button
