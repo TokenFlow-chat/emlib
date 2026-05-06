@@ -29,7 +29,7 @@ export function App() {
 
   return (
     <main className="relative overflow-x-clip">
-      <AppNav hashSyncEnabled={!isRestoring} />
+      <AppNav hashSyncEnabled={!isRestoring} autoHideEnabled={!isRestoring} />
       <section className="mx-auto flex min-h-screen w-full max-w-370 flex-col gap-5 px-3 pb-6 pt-4 sm:px-4 sm:pb-8 sm:pt-5 lg:gap-6 lg:px-6 lg:pb-10 lg:pt-6">
         <section id="overview" className="scroll-mt-28">
           <LazySection

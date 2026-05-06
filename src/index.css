@@ -225,7 +225,7 @@
     background: transparent;
   }
 
-  .force-graph-viewport-expanded {
+  .force-graph-viewport.force-graph-viewport-expanded {
     position: absolute;
     inset: 0;
     width: 100%;
@@ -297,7 +297,6 @@
 
   .force-graph-toolbar {
     top: 0.75rem;
-    right: auto;
     left: 0.75rem;
     display: flex;
     align-items: center;
@@ -400,40 +399,42 @@
   }
 }
 
-@media (max-width: 1023px) {
-  .diagram-canvas {
-    min-height: 26rem;
+@layer components {
+  @media (max-width: 1023px) {
+    .diagram-canvas {
+      min-height: 26rem;
+    }
+
+    .force-graph-viewport {
+      height: 24rem;
+    }
   }
 
-  .force-graph-viewport {
-    height: 24rem;
-  }
-}
+  @media (max-width: 639px) {
+    .diagram-canvas {
+      min-height: 20rem;
+    }
 
-@media (max-width: 639px) {
-  .diagram-canvas {
-    min-height: 20rem;
-  }
+    .force-graph-viewport {
+      height: 20rem;
+    }
 
-  .force-graph-viewport {
-    height: 18rem;
-  }
+    .force-graph-toolbar {
+      align-items: flex-start;
+      border-radius: 0.8rem;
+    }
 
-  .force-graph-toolbar {
-    align-items: flex-start;
-    border-radius: 0.8rem;
-  }
+    .force-graph-node-panel {
+      display: none;
+    }
 
-  .force-graph-node-panel {
-    display: none;
-  }
+    .force-graph-legend {
+      display: none;
+    }
 
-  .force-graph-legend {
-    display: none;
-  }
-
-  .force-graph-toolbar-stats {
-    display: none;
+    .force-graph-toolbar-stats {
+      display: none;
+    }
   }
 }
 

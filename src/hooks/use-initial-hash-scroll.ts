@@ -15,7 +15,10 @@ export function getTrackedHashId<T extends string>(sectionIds: readonly T[]): T 
 export function useInitialHashScroll(sectionIds: readonly string[]) {
   const normalizedIds = useMemo(() => sectionIds.filter((id) => id.length > 0), [sectionIds]);
   const idsKey = normalizedIds.join("|");
-  const [isRestoring, setIsRestoring] = useState(() => getTrackedHashId(normalizedIds).length > 0);
+  const [isRestoring, setIsRestoring] = useState(() => {
+    const hashId = getTrackedHashId(normalizedIds);
+    return hashId.length > 0 && hashId !== "overview";
+  });
 
   useEffect(() => {
     if (typeof window === "undefined" || normalizedIds.length === 0) {
@@ -24,7 +27,7 @@ export function useInitialHashScroll(sectionIds: readonly string[]) {
     }
 
     const hashId = getTrackedHashId(normalizedIds);
-    if (!hashId) {
+    if (!hashId || hashId === "overview") {
       setIsRestoring(false);
       return;
     }
@@ -69,7 +72,7 @@ export function useInitialHashScroll(sectionIds: readonly string[]) {
       const target = document.getElementById(hashId);
       if (!target) return;
 
-      target.scrollIntoView({ block: "start", inline: "nearest" });
+      target.scrollIntoView({ block: "start", inline: "nearest", behavior: "instant" });
 
       const scrollMarginTop =
         Number.parseFloat(window.getComputedStyle(target).scrollMarginTop) || 0;

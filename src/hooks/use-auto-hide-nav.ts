@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 type UseAutoHideNavOptions = {
+  enabled?: boolean;
   hideThreshold?: number;
   showThreshold?: number;
   topOffset?: number;
@@ -9,6 +10,7 @@ type UseAutoHideNavOptions = {
 const SUPPRESS_AUTO_HIDE_MS = 800;
 
 export function useAutoHideNav({
+  enabled = true,
   hideThreshold = 6,
   showThreshold = 6,
   topOffset = 12,
@@ -17,6 +19,11 @@ export function useAutoHideNav({
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+
+    if (!enabled) {
+      setIsVisible(true);
+      return;
+    }
 
     let frame = 0;
     let lastScrollY = window.scrollY;
@@ -72,7 +79,7 @@ export function useAutoHideNav({
         window.clearTimeout(suppressTimer);
       }
     };
-  }, [hideThreshold, showThreshold, topOffset]);
+  }, [enabled, hideThreshold, showThreshold, topOffset]);
 
   return { isVisible };
 }

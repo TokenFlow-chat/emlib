@@ -64,7 +64,7 @@ function NavLink({
   );
 }
 
-export function AppNav({ hashSyncEnabled = true }: { hashSyncEnabled?: boolean }) {
+export function AppNav({ hashSyncEnabled = true, autoHideEnabled = true }: { hashSyncEnabled?: boolean; autoHideEnabled?: boolean }) {
   const { messages } = useI18n();
   const { activeId } = useScrollSectionHash(
     navItems.map((item) => item.id),
@@ -72,7 +72,7 @@ export function AppNav({ hashSyncEnabled = true }: { hashSyncEnabled?: boolean }
       enabled: hashSyncEnabled,
     },
   );
-  const { isVisible } = useAutoHideNav();
+  const { isVisible } = useAutoHideNav({ enabled: autoHideEnabled });
 
   return (
     <header
