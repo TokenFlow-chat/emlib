@@ -1,7 +1,7 @@
 import type { ForceGraph3DInstance, ConfigOptions } from "3d-force-graph";
 import type { SerializedExprGraph, SerializedExprLink, SerializedExprNode } from "emlib";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { CanvasTexture, LinearFilter, Sprite, SpriteMaterial, type Object3D } from "three";
+import { CanvasTexture, LinearFilter, Sprite, SpriteMaterial, Vector3, type Object3D } from "three";
 
 import type { LayoutMode } from "./constants";
 
@@ -290,6 +290,7 @@ export function useForceGraphPreview({
   const instanceRef = useRef<ExpressionGraphInstance | null>(null);
   const onSelectNodeRef = useRef(onSelectNode);
   const prevLayoutModeRef = useRef<LayoutMode | null>(null);
+  const hasInitialRotationRef = useRef(false);
   const [containerNode, setContainerNode] = useState<HTMLDivElement | null>(null);
   const [renderError, setRenderError] = useState<string | null>(null);
   const [isRendering, setIsRendering] = useState(false);
@@ -374,6 +375,10 @@ export function useForceGraphPreview({
 
         instance.renderer().setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
 
+        const controls = instance.controls() as { dynamicDampingFactor: number };
+        controls.dynamicDampingFactor = 0;
+        hasInitialRotationRef.current = false;
+
         const applySize = () => {
           if (!containerRef.current) return;
           const rect = containerRef.current.getBoundingClientRect();
@@ -421,8 +426,18 @@ export function useForceGraphPreview({
 
     instance
       .onEngineStop(() => {
-        instance.zoomToFit(720, 54);
+        instance.zoomToFit(500, 0);
         setIsRendering(false);
+
+        if (!hasInitialRotationRef.current) {
+          if (!instanceRef.current) return;
+          const ctrls = instance.controls() as { _lastAngle: number; _lastAxis: Vector3 };
+          if (ctrls._lastAngle === 0) {
+            ctrls._lastAngle = -0.005;
+            ctrls._lastAxis.set(0, 1, 0);
+          }
+          hasInitialRotationRef.current = true;
+        }
       })
       .warmupTicks(layoutMode === "free" ? 24 : 32)
       .cooldownTicks(layoutMode === "free" ? 80 : 110)
