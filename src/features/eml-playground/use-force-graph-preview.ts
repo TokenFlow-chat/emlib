@@ -177,6 +177,7 @@ function toForceGraphData(graph: SerializedExprGraph): ForceGraphData {
   };
 }
 
+const MAX_LABEL_TEXTURE_CACHE = 256;
 const labelTextureCache = new Map<string, CanvasTexture>();
 
 function createTextSprite(node: ForceGraphNode): Object3D {
@@ -185,6 +186,13 @@ function createTextSprite(node: ForceGraphNode): Object3D {
   let texture = labelTextureCache.get(cacheKey);
 
   if (!texture) {
+    if (labelTextureCache.size >= MAX_LABEL_TEXTURE_CACHE) {
+      for (const [key, tex] of labelTextureCache) {
+        tex.dispose();
+        labelTextureCache.delete(key);
+        break;
+      }
+    }
     const canvas = document.createElement("canvas");
     const context = canvas.getContext("2d");
 
@@ -238,7 +246,7 @@ function createTextSprite(node: ForceGraphNode): Object3D {
   const image = texture.image as HTMLCanvasElement;
   const scale = node.role === "operator" ? 10 : 8.6;
   sprite.scale.set((image.width / image.height) * scale, scale, 1);
-  sprite.position.y = node.role === "operator" ? 9.5 : 7.5;
+  sprite.position.y = 0;
   return sprite;
 }
 
@@ -290,7 +298,7 @@ function focusNode(instance: ExpressionGraphInstance, node: ForceGraphNode) {
   instance.cameraPosition(
     { x: x * distRatio, y: y * distRatio, z: z * distRatio },
     { x, y, z },
-    3000,
+    800,
   );
 }
 
@@ -312,6 +320,7 @@ export function useForceGraphPreview({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const instanceRef = useRef<ExpressionGraphInstance | null>(null);
   const onSelectNodeRef = useRef(onSelectNode);
+  const prevLayoutModeRef = useRef<LayoutMode | null>(null);
   const [containerNode, setContainerNode] = useState<HTMLDivElement | null>(null);
   const [renderError, setRenderError] = useState<string | null>(null);
   const [isRendering, setIsRendering] = useState(false);
@@ -333,7 +342,6 @@ export function useForceGraphPreview({
 
     let cancelled = false;
     let resizeObserver: ResizeObserver | null = null;
-    setIsRendering(true);
     setRenderError(null);
 
     const init = async () => {
@@ -380,10 +388,12 @@ export function useForceGraphPreview({
           .linkDirectionalArrowColor((link) => link.color)
           .linkDirectionalArrowRelPos(0.94)
           .linkDirectionalArrowResolution(8)
-          .linkDirectionalParticles((link) => link.particles)
+          .linkDirectionalParticles(() => 0)
           .linkDirectionalParticleSpeed((link) => link.particleSpeed)
           .linkDirectionalParticleWidth((link) => (link.argument === "value" ? 0.85 : 1.45))
           .linkDirectionalParticleColor((link) => link.color)
+          .forceEngine("d3")
+          .numDimensions(3)
           .enableNodeDrag(true)
           .onNodeClick((node) => {
             onSelectNodeRef.current(String(node.id ?? ""));
@@ -391,9 +401,6 @@ export function useForceGraphPreview({
           })
           .onBackgroundClick(() => {
             onSelectNodeRef.current(null);
-          })
-          .onEngineStop(() => {
-            setIsRendering(false);
           });
 
         instance.renderer().setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
@@ -408,6 +415,7 @@ export function useForceGraphPreview({
         applySize();
         resizeObserver = new ResizeObserver(applySize);
         resizeObserver.observe(containerRef.current);
+        prevLayoutModeRef.current = null;
         setIsReady(true);
       } catch (error) {
         if (cancelled) return;
@@ -421,9 +429,9 @@ export function useForceGraphPreview({
     return () => {
       cancelled = true;
       resizeObserver?.disconnect();
-      instanceRef.current?._destructor();
+      const inst = instanceRef.current;
       instanceRef.current = null;
-      containerNode.replaceChildren();
+      inst?._destructor();
       setIsReady(false);
     };
   }, [active, canRender, containerNode]);
@@ -434,23 +442,24 @@ export function useForceGraphPreview({
 
     setRenderError(null);
     setIsRendering(true);
-    setDagMode(instance, layoutMode);
-    configureForces(instance, layoutMode);
+
+    const layoutChanged = prevLayoutModeRef.current !== layoutMode;
+    if (layoutChanged || prevLayoutModeRef.current === null) {
+      setDagMode(instance, layoutMode);
+      configureForces(instance, layoutMode);
+    }
+    prevLayoutModeRef.current = layoutMode;
+
     instance
-      .forceEngine("d3")
-      .numDimensions(3)
-      .warmupTicks(layoutMode === "free" ? 32 : 48)
-      .cooldownTicks(layoutMode === "free" ? 140 : 180)
-      .cooldownTime(3600)
+      .onEngineStop(() => {
+        instance.zoomToFit(720, 54);
+        setIsRendering(false);
+      })
+      .warmupTicks(layoutMode === "free" ? 24 : 32)
+      .cooldownTicks(layoutMode === "free" ? 80 : 110)
+      .cooldownTime(2400)
       .graphData(graphData)
       .d3ReheatSimulation();
-
-    const timer = window.setTimeout(() => {
-      instance.zoomToFit(720, 54);
-      setIsRendering(false);
-    }, 1800);
-
-    return () => window.clearTimeout(timer);
   }, [active, canRender, graphData, isReady, layoutMode]);
 
   useEffect(() => {
