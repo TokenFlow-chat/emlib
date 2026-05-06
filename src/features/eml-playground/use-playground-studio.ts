@@ -160,6 +160,7 @@ export function usePlaygroundStudio() {
   const [layoutMode, setLayoutMode] = useState<LayoutMode>(initialUrlState.layoutMode);
   const [dedupMode, setDedupMode] = useState<DedupMode>(initialUrlState.dedupMode);
   const [selectedGraphNodeId, setSelectedGraphNodeId] = useState<string | null>(null);
+  const [showLabels, setShowLabels] = useState(false);
   const [envValues, setEnvValues] = useState<Record<string, string>>(initialUrlState.envValues);
   const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">("idle");
   const [compressionMode, setCompressionMode] = useState<CompressionMode>(
@@ -352,7 +353,7 @@ export function usePlaygroundStudio() {
       return;
     }
 
-    setSelectedGraphNodeId(diagramPayload.graph.rootId);
+    setSelectedGraphNodeId(null);
   }, [diagramPayload.graph, selectedGraphNodeId]);
 
   const selectedGraphNode = useMemo(() => {
@@ -365,7 +366,7 @@ export function usePlaygroundStudio() {
     canRender: diagramPayload.canRender,
     graph: diagramPayload.graph,
     layoutMode,
-    selectedNodeId: selectedGraphNodeId,
+    showLabels,
     onSelectNode: setSelectedGraphNodeId,
   });
 
@@ -527,6 +528,8 @@ export function usePlaygroundStudio() {
     selectedGraphNodeId,
     setSelectedGraphNodeId,
     selectedGraphNode,
+    showLabels,
+    setShowLabels,
     envValues,
     setEnvValues,
     copyState,

@@ -269,11 +269,14 @@ export const enUS = {
         "The 3D graph runtime loads only when this area gets close to the viewport, keeping the initial JS bundle smaller.",
       loading: "Loading the 3D graph runtime...",
       empty: "The 3D expression graph will appear here after you enter an expression.",
+      expandedHint: "The graph is open in the expanded preview.",
       renderError: ({ detail }: { detail: string }) => `The graph could not be rendered: ${detail}`,
       layoutBadge: ({ layout }: { layout: string }) => `3D / ${layout}`,
       fitButton: "Fit",
       expandButton: "Expand",
       collapseButton: "Exit",
+      labelsOn: "Labels",
+      labelsOff: "Labels",
       selectedNodeTitle: "Selected node",
       noSelectedNode: "No node selected.",
       nodeFields: {
@@ -293,9 +296,9 @@ export const enUS = {
         { label: "shared", tone: "shared" },
       ],
       edgeLegend: [
-        { label: "value edge", tone: "value" },
-        { label: "left / x edge", tone: "left" },
-        { label: "right / y edge", tone: "right" },
+        { label: "value", tone: "value" },
+        { label: "x", tone: "left" },
+        { label: "y", tone: "right" },
       ],
       renderLimitReason: ({
         label,

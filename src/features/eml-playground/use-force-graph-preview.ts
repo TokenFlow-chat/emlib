@@ -1,6 +1,7 @@
 import type { ForceGraph3DInstance, ConfigOptions } from "3d-force-graph";
 import type { SerializedExprGraph, SerializedExprLink, SerializedExprNode } from "emlib";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { CanvasTexture, LinearFilter, Sprite, SpriteMaterial, type Object3D } from "three";
 
 import type { LayoutMode } from "./constants";
 
@@ -10,6 +11,7 @@ type ForceGraphNode = SerializedExprNode & {
   name: string;
   val: number;
   color: string;
+  textColor: string;
   x?: number;
   y?: number;
   z?: number;
@@ -36,27 +38,6 @@ type ExpressionGraphInstance = ForceGraph3DInstance<ForceGraphNode, ForceGraphLi
 type ForceSettings = {
   distance?: (value: unknown) => unknown;
   strength?: (value: unknown) => unknown;
-};
-
-type CameraLike = {
-  position: {
-    x: number;
-    y: number;
-    z: number;
-    set?: (x: number, y: number, z: number) => void;
-  };
-  lookAt?: (position: { x: number; y: number; z: number }) => void;
-};
-
-type ControlsLike = {
-  target?: {
-    x: number;
-    y: number;
-    z: number;
-    copy?: (position: { x: number; y: number; z: number }) => void;
-    set?: (x: number, y: number, z: number) => void;
-  };
-  update?: () => void;
 };
 
 let forceGraphModulePromise: Promise<ForceGraphModule> | null = null;
@@ -111,16 +92,20 @@ function baseNodeColor(node: SerializedExprNode): string {
   }
 }
 
-function nodeColor(node: ForceGraphNode, selectedNodeId: string | null): string {
-  if (node.id === selectedNodeId) return "#101827";
-  return node.color;
-}
+function nodeTextColor(node: SerializedExprNode): string {
+  if (node.id === "n0") return "#1c2730";
+  if (node.repeated) return "#55458d";
 
-function nodeValue(node: ForceGraphNode, selectedNodeId: string | null): number {
-  const base = node.role === "operator" ? 3 + node.arity : 2;
-  const repeatedBoost = node.repeated ? 0.9 : 0;
-  const selectedBoost = node.id === selectedNodeId ? 1.4 : 0;
-  return base + repeatedBoost + selectedBoost;
+  switch (node.role) {
+    case "operator":
+      return "#236775";
+    case "variable":
+      return "#8f5b2e";
+    case "constant":
+      return "#874157";
+    default:
+      return "#52616b";
+  }
 }
 
 function linkColor(link: SerializedExprLink): string {
@@ -163,9 +148,7 @@ function nodeTooltip(node: SerializedExprNode): string {
   ].join("\n");
 }
 
-function linkTooltip(
-  link: Pick<SerializedExprLink, "argument" | "label" | "parentKind">,
-): string {
+function linkTooltip(link: Pick<SerializedExprLink, "argument" | "label" | "parentKind">): string {
   return link.label
     ? `${link.parentKind} ${link.argument}: ${link.label}`
     : `${link.parentKind} ${link.argument}`;
@@ -176,8 +159,9 @@ function toForceGraphData(graph: SerializedExprGraph): ForceGraphData {
     nodes: graph.nodes.map((node) => ({
       ...node,
       name: nodeTooltip(node),
-      val: node.role === "operator" ? 4 : 2,
+      val: node.role === "operator" ? 3 + node.arity : 2 + (node.repeated ? 0.9 : 0),
       color: baseNodeColor(node),
+      textColor: nodeTextColor(node),
     })),
     links: graph.links.map((link) => ({
       ...link,
@@ -191,6 +175,71 @@ function toForceGraphData(graph: SerializedExprGraph): ForceGraphData {
       particleSpeed: linkParticleSpeed(link),
     })),
   };
+}
+
+const labelTextureCache = new Map<string, CanvasTexture>();
+
+function createTextSprite(node: ForceGraphNode): Object3D {
+  const text = node.label.length > 16 ? `${node.label.slice(0, 15)}...` : node.label;
+  const cacheKey = `${text}:${node.textColor}:${node.repeated}`;
+  let texture = labelTextureCache.get(cacheKey);
+
+  if (!texture) {
+    const canvas = document.createElement("canvas");
+    const context = canvas.getContext("2d");
+
+    if (!context) {
+      return new Sprite();
+    }
+
+    const ratio = Math.min(window.devicePixelRatio || 1, 2);
+    const fontSize = 30;
+    const horizontalPadding = 14;
+    const verticalPadding = 8;
+
+    context.font = `700 ${fontSize}px ui-monospace, SFMono-Regular, Menlo, monospace`;
+    const metrics = context.measureText(text);
+    const width = Math.ceil(metrics.width + horizontalPadding * 2);
+    const height = fontSize + verticalPadding * 2;
+    canvas.width = Math.ceil(width * ratio);
+    canvas.height = Math.ceil(height * ratio);
+
+    context.scale(ratio, ratio);
+    context.font = `700 ${fontSize}px ui-monospace, SFMono-Regular, Menlo, monospace`;
+    context.textBaseline = "middle";
+    context.lineJoin = "round";
+    context.fillStyle = "rgba(255,255,255,0.86)";
+    context.strokeStyle = node.repeated ? "rgba(107,90,166,0.5)" : "rgba(68,88,94,0.22)";
+    context.lineWidth = 2;
+
+    const radius = height / 2;
+    context.beginPath();
+    context.roundRect(1, 1, width - 2, height - 2, radius);
+    context.fill();
+    context.stroke();
+    context.fillStyle = node.textColor;
+    context.fillText(text, horizontalPadding, height / 2 + 1);
+
+    texture = new CanvasTexture(canvas);
+    texture.minFilter = LinearFilter;
+    texture.needsUpdate = true;
+    labelTextureCache.set(cacheKey, texture);
+  }
+
+  const material = new SpriteMaterial({
+    map: texture,
+    transparent: true,
+    depthWrite: false,
+  }) as SpriteMaterial & { depthTest: boolean };
+  material.depthTest = false;
+  const sprite = new Sprite(material) as Sprite & { renderOrder: number; raycast: () => void };
+  sprite.renderOrder = 1;
+  sprite.raycast = () => {};
+  const image = texture.image as HTMLCanvasElement;
+  const scale = node.role === "operator" ? 10 : 8.6;
+  sprite.scale.set((image.width / image.height) * scale, scale, 1);
+  sprite.position.y = node.role === "operator" ? 9.5 : 7.5;
+  return sprite;
 }
 
 function setDagMode(instance: ExpressionGraphInstance, layoutMode: LayoutMode) {
@@ -235,35 +284,14 @@ function focusNode(instance: ExpressionGraphInstance, node: ForceGraphNode) {
   const z = node.z ?? 0;
   if (![x, y, z].every(Number.isFinite)) return;
 
-  const distance = 88;
-  const radius = Math.hypot(x, y, z) || 1;
-  const ratio = 1 + distance / radius;
-  const position = { x: x * ratio, y: y * ratio, z: z * ratio };
-  const lookAt = { x, y, z };
-  const camera = instance.camera() as CameraLike;
-  const controls = instance.controls() as ControlsLike;
+  const distance = 40;
+  const distRatio = 1 + distance / (Math.hypot(x, y, z) || 1);
 
-  if (camera.position.set) {
-    camera.position.set(position.x, position.y, position.z);
-  } else {
-    camera.position.x = position.x;
-    camera.position.y = position.y;
-    camera.position.z = position.z;
-  }
-
-  if (controls.target?.copy) {
-    controls.target.copy(lookAt);
-  } else if (controls.target?.set) {
-    controls.target.set(lookAt.x, lookAt.y, lookAt.z);
-  } else if (controls.target) {
-    controls.target.x = lookAt.x;
-    controls.target.y = lookAt.y;
-    controls.target.z = lookAt.z;
-  } else {
-    camera.lookAt?.(lookAt);
-  }
-
-  controls.update?.();
+  instance.cameraPosition(
+    { x: x * distRatio, y: y * distRatio, z: z * distRatio },
+    { x, y, z },
+    3000,
+  );
 }
 
 export function useForceGraphPreview({
@@ -271,14 +299,14 @@ export function useForceGraphPreview({
   canRender,
   graph,
   layoutMode,
-  selectedNodeId,
+  showLabels,
   onSelectNode,
 }: {
   active: boolean;
   canRender: boolean;
   graph: SerializedExprGraph | null;
   layoutMode: LayoutMode;
-  selectedNodeId: string | null;
+  showLabels: boolean;
   onSelectNode: (nodeId: string | null) => void;
 }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -314,7 +342,7 @@ export function useForceGraphPreview({
         if (cancelled || !containerRef.current) return;
 
         const config: ConfigOptions = {
-          controlType: "orbit",
+          controlType: "trackball",
           rendererConfig: {
             antialias: true,
             alpha: true,
@@ -338,8 +366,10 @@ export function useForceGraphPreview({
           .nodeOpacity(0.96)
           .nodeResolution(18)
           .nodeLabel(nodeTooltip)
-          .nodeColor((node) => nodeColor(node, null))
-          .nodeVal((node) => nodeValue(node, null))
+          .nodeColor((node) => node.color)
+          .nodeVal((node) => node.val)
+          .nodeThreeObject(() => new Sprite())
+          .nodeThreeObjectExtend(true)
           .linkLabel(linkTooltip)
           .linkColor((link) => link.color)
           .linkWidth((link) => link.width)
@@ -427,11 +457,8 @@ export function useForceGraphPreview({
     const instance = instanceRef.current;
     if (!instance || !isReady) return;
 
-    instance
-      .nodeColor((node) => nodeColor(node, selectedNodeId))
-      .nodeVal((node) => nodeValue(node, selectedNodeId))
-      .refresh();
-  }, [isReady, selectedNodeId]);
+    instance.nodeThreeObject(showLabels ? createTextSprite : () => new Sprite()).refresh();
+  }, [isReady, showLabels]);
 
   const resetCamera = useCallback(() => {
     instanceRef.current?.zoomToFit(720, 54);
