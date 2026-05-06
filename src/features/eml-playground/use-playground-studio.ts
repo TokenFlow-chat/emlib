@@ -160,7 +160,7 @@ export function usePlaygroundStudio() {
   const [layoutMode, setLayoutMode] = useState<LayoutMode>(initialUrlState.layoutMode);
   const [dedupMode, setDedupMode] = useState<DedupMode>(initialUrlState.dedupMode);
   const [selectedGraphNodeId, setSelectedGraphNodeId] = useState<string | null>(null);
-  const [showLabels, setShowLabels] = useState(false);
+  const [showLabels, setShowLabels] = useState(true);
   const [envValues, setEnvValues] = useState<Record<string, string>>(initialUrlState.envValues);
   const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">("idle");
   const [compressionMode, setCompressionMode] = useState<CompressionMode>(

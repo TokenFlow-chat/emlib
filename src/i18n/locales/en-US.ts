@@ -296,8 +296,8 @@ export const enUS = {
       ],
       edgeLegend: [
         { label: "value", tone: "value" },
-        { label: "x", tone: "left" },
-        { label: "y", tone: "right" },
+        { label: "left / x", tone: "left" },
+        { label: "right / y", tone: "right" },
       ],
       renderLimitReason: ({
         label,

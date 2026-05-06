@@ -100,7 +100,7 @@ export function useForceGraphPreview({
           rendererConfig: {
             antialias: true,
             alpha: true,
-            powerPreference: "high-performance",
+            powerPreference: "default",
           },
         };
         const ForceGraph3D = module.default as unknown as new (
@@ -118,7 +118,7 @@ export function useForceGraphPreview({
           .linkTarget("target")
           .nodeRelSize(4.6)
           .nodeOpacity(0.96)
-          .nodeResolution(18)
+          .nodeResolution(32)
           .nodeLabel((node) => node.name)
           .nodeColor((node) => node.color)
           .nodeVal((node) => node.val)
@@ -152,7 +152,7 @@ export function useForceGraphPreview({
         instance.renderer().setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
 
         const controls = instance.controls() as { dynamicDampingFactor: number };
-        controls.dynamicDampingFactor = 0;
+        controls.dynamicDampingFactor = 0.01;
         hasInitialRotationRef.current = false;
 
         const applySize = () => {
@@ -202,7 +202,7 @@ export function useForceGraphPreview({
 
     instance
       .onEngineStop(() => {
-        instance.zoomToFit(500, 0);
+        instance.zoomToFit(300, 0);
         setIsRendering(false);
 
         if (!hasInitialRotationRef.current) {
@@ -233,7 +233,7 @@ export function useForceGraphPreview({
   }, [isReady, showLabels]);
 
   const resetCamera = useCallback(() => {
-    instanceRef.current?.zoomToFit(720, 54);
+    instanceRef.current?.zoomToFit(500, 0);
   }, []);
 
   return {

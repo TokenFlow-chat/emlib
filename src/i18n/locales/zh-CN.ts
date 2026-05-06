@@ -292,9 +292,9 @@ export const zhCN = {
         { label: "常量", tone: "constant" },
       ],
       edgeLegend: [
-        { label: "value 边", tone: "value" },
-        { label: "left / x 边", tone: "left" },
-        { label: "right / y 边", tone: "right" },
+        { label: "value", tone: "value" },
+        { label: "left / x", tone: "left" },
+        { label: "right / y", tone: "right" },
       ],
       renderLimitReason: ({
         label,

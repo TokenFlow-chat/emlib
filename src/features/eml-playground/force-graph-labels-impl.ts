@@ -31,13 +31,15 @@ export function createTextSprite(node: ForceGraphNode): Object3D {
     const horizontalPadding = 14;
     const verticalPadding = 8;
 
-    context.font = `700 ${fontSize}px ui-monospace, SFMono-Regular, Menlo, monospace`;
+    const contextFont = `700 ${fontSize}px ui-monospace, SFMono-Regular, Menlo, monospace`;
+    context.font = contextFont;
     const metrics = context.measureText(text);
     const width = Math.ceil(metrics.width + horizontalPadding * 2);
     const height = fontSize + verticalPadding * 2;
     canvas.width = Math.ceil(width * ratio);
     canvas.height = Math.ceil(height * ratio);
 
+    context.font = contextFont;
     context.scale(ratio, ratio);
     context.textBaseline = "middle";
     context.fillStyle = "#fff";
