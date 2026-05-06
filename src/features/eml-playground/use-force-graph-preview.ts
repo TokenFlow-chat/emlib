@@ -16,11 +16,14 @@ type ForceGraphNode = SerializedExprNode & {
 };
 
 type ForceGraphLink = Omit<SerializedExprLink, "source" | "target"> & {
-  source: string;
-  target: string;
+  source: string | ForceGraphNode;
+  target: string | ForceGraphNode;
   name: string;
   color: string;
   width: number;
+  curvature: number;
+  particles: number;
+  particleSpeed: number;
 };
 
 type ForceGraphData = {
@@ -33,6 +36,27 @@ type ExpressionGraphInstance = ForceGraph3DInstance<ForceGraphNode, ForceGraphLi
 type ForceSettings = {
   distance?: (value: unknown) => unknown;
   strength?: (value: unknown) => unknown;
+};
+
+type CameraLike = {
+  position: {
+    x: number;
+    y: number;
+    z: number;
+    set?: (x: number, y: number, z: number) => void;
+  };
+  lookAt?: (position: { x: number; y: number; z: number }) => void;
+};
+
+type ControlsLike = {
+  target?: {
+    x: number;
+    y: number;
+    z: number;
+    copy?: (position: { x: number; y: number; z: number }) => void;
+    set?: (x: number, y: number, z: number) => void;
+  };
+  update?: () => void;
 };
 
 let forceGraphModulePromise: Promise<ForceGraphModule> | null = null;
@@ -100,12 +124,34 @@ function nodeValue(node: ForceGraphNode, selectedNodeId: string | null): number 
 }
 
 function linkColor(link: SerializedExprLink): string {
-  if (link.label) return "#456ac7";
-  return "#7f9492";
+  switch (link.argument) {
+    case "left":
+      return "#2d63c8";
+    case "right":
+      return "#c44f82";
+    case "value":
+      return "#3f8f76";
+    default:
+      return "#7f9492";
+  }
 }
 
 function linkWidth(link: SerializedExprLink): number {
-  return link.label ? 1.25 : 0.72;
+  return link.argument === "value" ? 1.05 : 1.75;
+}
+
+function linkCurvature(link: SerializedExprLink): number {
+  if (link.argument === "left") return -0.16;
+  if (link.argument === "right") return 0.16;
+  return 0.035;
+}
+
+function linkParticles(link: SerializedExprLink): number {
+  return link.argument === "value" ? 1 : 2;
+}
+
+function linkParticleSpeed(link: SerializedExprLink): number {
+  return link.argument === "value" ? 0.0035 : 0.0065;
 }
 
 function nodeTooltip(node: SerializedExprNode): string {
@@ -117,7 +163,9 @@ function nodeTooltip(node: SerializedExprNode): string {
   ].join("\n");
 }
 
-function linkTooltip(link: SerializedExprLink): string {
+function linkTooltip(
+  link: Pick<SerializedExprLink, "argument" | "label" | "parentKind">,
+): string {
   return link.label
     ? `${link.parentKind} ${link.argument}: ${link.label}`
     : `${link.parentKind} ${link.argument}`;
@@ -138,6 +186,9 @@ function toForceGraphData(graph: SerializedExprGraph): ForceGraphData {
       name: linkTooltip(link),
       color: linkColor(link),
       width: linkWidth(link),
+      curvature: linkCurvature(link),
+      particles: linkParticles(link),
+      particleSpeed: linkParticleSpeed(link),
     })),
   };
 }
@@ -182,11 +233,37 @@ function focusNode(instance: ExpressionGraphInstance, node: ForceGraphNode) {
   const x = node.x ?? 0;
   const y = node.y ?? 0;
   const z = node.z ?? 0;
+  if (![x, y, z].every(Number.isFinite)) return;
+
   const distance = 88;
   const radius = Math.hypot(x, y, z) || 1;
   const ratio = 1 + distance / radius;
+  const position = { x: x * ratio, y: y * ratio, z: z * ratio };
+  const lookAt = { x, y, z };
+  const camera = instance.camera() as CameraLike;
+  const controls = instance.controls() as ControlsLike;
 
-  instance.cameraPosition({ x: x * ratio, y: y * ratio, z: z * ratio }, { x, y, z }, 720);
+  if (camera.position.set) {
+    camera.position.set(position.x, position.y, position.z);
+  } else {
+    camera.position.x = position.x;
+    camera.position.y = position.y;
+    camera.position.z = position.z;
+  }
+
+  if (controls.target?.copy) {
+    controls.target.copy(lookAt);
+  } else if (controls.target?.set) {
+    controls.target.set(lookAt.x, lookAt.y, lookAt.z);
+  } else if (controls.target) {
+    controls.target.x = lookAt.x;
+    controls.target.y = lookAt.y;
+    controls.target.z = lookAt.z;
+  } else {
+    camera.lookAt?.(lookAt);
+  }
+
+  controls.update?.();
 }
 
 export function useForceGraphPreview({
@@ -266,14 +343,17 @@ export function useForceGraphPreview({
           .linkLabel(linkTooltip)
           .linkColor((link) => link.color)
           .linkWidth((link) => link.width)
-          .linkOpacity(0.38)
+          .linkOpacity(0.54)
           .linkResolution(8)
-          .linkDirectionalArrowLength((link) => (link.label ? 4 : 2.8))
+          .linkCurvature((link) => link.curvature)
+          .linkDirectionalArrowLength((link) => (link.argument === "value" ? 3.2 : 5))
+          .linkDirectionalArrowColor((link) => link.color)
           .linkDirectionalArrowRelPos(0.94)
           .linkDirectionalArrowResolution(8)
-          .linkDirectionalParticles((link) => (link.label ? 2 : 1))
-          .linkDirectionalParticleSpeed((link) => (link.label ? 0.006 : 0.0035))
-          .linkDirectionalParticleWidth((link) => (link.label ? 1.35 : 0.75))
+          .linkDirectionalParticles((link) => link.particles)
+          .linkDirectionalParticleSpeed((link) => link.particleSpeed)
+          .linkDirectionalParticleWidth((link) => (link.argument === "value" ? 0.85 : 1.45))
+          .linkDirectionalParticleColor((link) => link.color)
           .enableNodeDrag(true)
           .onNodeClick((node) => {
             onSelectNodeRef.current(String(node.id ?? ""));

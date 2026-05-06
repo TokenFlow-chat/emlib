@@ -1,4 +1,5 @@
-import { LuCheck, LuCopy, LuFocus } from "react-icons/lu";
+import { useEffect, useState } from "react";
+import { LuCheck, LuCopy, LuFocus, LuMaximize2, LuMinimize2 } from "react-icons/lu";
 
 import { Button } from "@/components/ui/button";
 import { LoadingMark } from "@/components/ui/loading-mark";
@@ -24,6 +25,31 @@ export function PlaygroundPreviewPanel({ studio }: { studio: PlaygroundStudioSta
   const playground = useMessages((messages) => messages.playground);
   const graphStats = diagramPayload.graph?.stats ?? null;
   const showPreviewLoading = graphPreview.isRendering || !graphPreview.isReady;
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  useEffect(() => {
+    if (!isExpanded) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsExpanded(false);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isExpanded]);
+
+  useEffect(() => {
+    if (diagramPayload.graph) return;
+    setIsExpanded(false);
+  }, [diagramPayload.graph]);
 
   return (
     <div ref={previewActivation.ref} className="min-w-0 space-y-2.5 xl:sticky xl:top-5">
@@ -69,7 +95,12 @@ export function PlaygroundPreviewPanel({ studio }: { studio: PlaygroundStudioSta
               </AsyncMessage>
             </div>
           ) : diagramPayload.graph ? (
-            <div className="force-graph-viewport">
+            <div
+              className={[
+                "force-graph-viewport",
+                isExpanded ? "force-graph-viewport-expanded" : "",
+              ].join(" ")}
+            >
               <div
                 ref={graphPreview.ref}
                 className="force-graph-canvas"
@@ -106,6 +137,23 @@ export function PlaygroundPreviewPanel({ studio }: { studio: PlaygroundStudioSta
                   <LuFocus className="size-3.5" />
                   {playground.diagram.fitButton}
                 </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-7 rounded-full border-[color:var(--line)] bg-white/82 px-2 text-[0.72rem]"
+                  onClick={() => setIsExpanded((current) => !current)}
+                  aria-label={
+                    isExpanded ? playground.diagram.collapseButton : playground.diagram.expandButton
+                  }
+                >
+                  {isExpanded ? (
+                    <LuMinimize2 className="size-3.5" />
+                  ) : (
+                    <LuMaximize2 className="size-3.5" />
+                  )}
+                  {isExpanded ? playground.diagram.collapseButton : playground.diagram.expandButton}
+                </Button>
               </div>
               <div className="force-graph-node-panel">
                 {selectedGraphNode ? (
@@ -132,9 +180,16 @@ export function PlaygroundPreviewPanel({ studio }: { studio: PlaygroundStudioSta
                 )}
               </div>
               <div className="force-graph-legend">
-                {playground.diagram.legend.map((item) => (
+                {playground.diagram.nodeLegend.map((item) => (
                   <span key={item.label} className="inline-flex items-center gap-1.5">
                     <span className={`force-graph-legend-dot ${item.tone}`} />
+                    {item.label}
+                  </span>
+                ))}
+                <span className="force-graph-legend-divider" />
+                {playground.diagram.edgeLegend.map((item) => (
+                  <span key={item.label} className="inline-flex items-center gap-1.5">
+                    <span className={`force-graph-legend-edge ${item.tone}`} />
                     {item.label}
                   </span>
                 ))}

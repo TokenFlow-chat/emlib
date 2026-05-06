@@ -225,6 +225,21 @@
     background: transparent;
   }
 
+  .force-graph-viewport-expanded {
+    position: fixed;
+    inset: 0;
+    z-index: 80;
+    height: 100dvh;
+    background:
+      linear-gradient(90deg, rgba(52, 80, 93, 0.055) 0.0625rem, transparent 0.0625rem),
+      linear-gradient(rgba(52, 80, 93, 0.055) 0.0625rem, transparent 0.0625rem),
+      linear-gradient(180deg, rgba(255, 252, 246, 0.98), rgba(242, 247, 246, 0.96));
+    background-size:
+      1.5rem 1.5rem,
+      1.5rem 1.5rem,
+      auto;
+  }
+
   .force-graph-canvas {
     position: absolute;
     inset: 0;
@@ -315,6 +330,31 @@
   .force-graph-legend-dot.shared {
     background: #6b5aa6;
   }
+
+  .force-graph-legend-divider {
+    width: 0.0625rem;
+    min-height: 0.85rem;
+    background: rgba(127, 143, 151, 0.34);
+  }
+
+  .force-graph-legend-edge {
+    width: 1.2rem;
+    height: 0.16rem;
+    border-radius: 999rem;
+    box-shadow: 0 0 0 0.0625rem rgba(16, 24, 39, 0.08);
+  }
+
+  .force-graph-legend-edge.value {
+    background: #3f8f76;
+  }
+
+  .force-graph-legend-edge.left {
+    background: #2d63c8;
+  }
+
+  .force-graph-legend-edge.right {
+    background: #c44f82;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -334,6 +374,10 @@
     height: 24rem;
   }
 
+  .force-graph-viewport-expanded {
+    height: 100dvh;
+  }
+
   .force-graph-legend {
     max-width: calc(100% - 1.5rem);
     bottom: 6.5rem;
@@ -347,6 +391,10 @@
 
   .force-graph-viewport {
     height: 18rem;
+  }
+
+  .force-graph-viewport-expanded {
+    height: 100dvh;
   }
 
   .force-graph-toolbar {

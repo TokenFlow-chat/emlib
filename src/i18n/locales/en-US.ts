@@ -272,6 +272,8 @@ export const enUS = {
       renderError: ({ detail }: { detail: string }) => `The graph could not be rendered: ${detail}`,
       layoutBadge: ({ layout }: { layout: string }) => `3D / ${layout}`,
       fitButton: "Fit",
+      expandButton: "Expand",
+      collapseButton: "Exit",
       selectedNodeTitle: "Selected node",
       noSelectedNode: "No node selected.",
       nodeFields: {
@@ -284,11 +286,16 @@ export const enUS = {
         links: ({ value }: { value: number }) => `${value} links`,
         depth: ({ value }: { value: number }) => `depth ${value}`,
       },
-      legend: [
+      nodeLegend: [
         { label: "operator", tone: "operator" },
         { label: "variable", tone: "variable" },
         { label: "constant", tone: "constant" },
         { label: "shared", tone: "shared" },
+      ],
+      edgeLegend: [
+        { label: "value edge", tone: "value" },
+        { label: "left / x edge", tone: "left" },
+        { label: "right / y edge", tone: "right" },
       ],
       renderLimitReason: ({
         label,

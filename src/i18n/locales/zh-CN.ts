@@ -269,6 +269,8 @@ export const zhCN = {
       renderError: ({ detail }: { detail: string }) => `结构图渲染失败：${detail}`,
       layoutBadge: ({ layout }: { layout: string }) => `3D / ${layout}`,
       fitButton: "适配",
+      expandButton: "展开",
+      collapseButton: "退出",
       selectedNodeTitle: "选中节点",
       noSelectedNode: "暂未选中节点。",
       nodeFields: {
@@ -281,11 +283,16 @@ export const zhCN = {
         links: ({ value }: { value: number }) => `${value} 边`,
         depth: ({ value }: { value: number }) => `深度 ${value}`,
       },
-      legend: [
+      nodeLegend: [
         { label: "算子", tone: "operator" },
         { label: "变量", tone: "variable" },
         { label: "常量", tone: "constant" },
         { label: "共享", tone: "shared" },
+      ],
+      edgeLegend: [
+        { label: "value 边", tone: "value" },
+        { label: "left / x 边", tone: "left" },
+        { label: "right / y 边", tone: "right" },
       ],
       renderLimitReason: ({
         label,
