@@ -280,7 +280,7 @@ export function PlaygroundPreviewPanel({ studio }: { studio: PlaygroundStudioSta
           <Textarea
             readOnly
             value={diagramPayload.jsonSource}
-            className="mt-2.5 h-24 min-h-0 rounded-[0.85rem] border-[color:var(--line)] bg-[color:var(--paper-strong)] font-mono text-xs leading-5"
+            className="mt-2.5 h-20 min-h-0 rounded-[0.85rem] border-[color:var(--line)] bg-[color:var(--paper-strong)] font-mono text-xs leading-5"
           />
         </div>
       </div>
