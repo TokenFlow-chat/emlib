@@ -32,7 +32,7 @@ export function LazySection({
   eager = false,
   errorFallback,
   fallback,
-  rootMargin = "320px 0px",
+  rootMargin = "600px 0px",
 }: LazySectionProps) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const [shouldLoad, setShouldLoad] = useState(eager);

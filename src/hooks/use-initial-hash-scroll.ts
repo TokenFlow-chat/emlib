@@ -72,7 +72,7 @@ export function useInitialHashScroll(sectionIds: readonly string[]) {
       const target = document.getElementById(hashId);
       if (!target) return;
 
-      target.scrollIntoView({ block: "start", inline: "nearest", behavior: "instant" });
+      target.scrollIntoView({ block: "start", inline: "nearest", behavior: "smooth" });
 
       const scrollMarginTop =
         Number.parseFloat(window.getComputedStyle(target).scrollMarginTop) || 0;
