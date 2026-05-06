@@ -355,15 +355,15 @@
   }
 
   .force-graph-legend-dot.operator {
-    background: #2f7d8c;
+    background: var(--fg-node-operator);
   }
 
   .force-graph-legend-dot.variable {
-    background: #b9783b;
+    background: var(--fg-node-variable);
   }
 
   .force-graph-legend-dot.constant {
-    background: #a84f6a;
+    background: var(--fg-node-constant);
   }
 
   .force-graph-legend-divider {
@@ -380,15 +380,15 @@
   }
 
   .force-graph-legend-edge.value {
-    background: #3f8f76;
+    background: var(--fg-link-value);
   }
 
   .force-graph-legend-edge.left {
-    background: #2d63c8;
+    background: var(--fg-link-left);
   }
 
   .force-graph-legend-edge.right {
-    background: #c44f82;
+    background: var(--fg-link-right);
   }
 }
 

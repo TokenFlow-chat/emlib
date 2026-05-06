@@ -1,5 +1,5 @@
 import { createPortal } from "react-dom";
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   LuCheck,
   LuCopy,
@@ -13,6 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { LoadingMark } from "@/components/ui/loading-mark";
 import { Textarea } from "@/components/ui/textarea";
+import { cssCustomProperties } from "@/features/eml-playground/force-graph-colors";
 import { getTransformCopy } from "@/features/eml-playground/playground-i18n";
 import { AsyncMessage, SegmentedTabs } from "@/features/eml-playground/playground-shared";
 import type { PlaygroundStudioState } from "@/features/eml-playground/use-playground-studio";
@@ -49,6 +50,7 @@ export function PlaygroundPreviewPanel({ studio }: { studio: PlaygroundStudioSta
   const graphRoot = useStableGraphRoot();
   const inPageSlotRef = useRef<HTMLDivElement | null>(null);
   const dialogRef = useRef<HTMLDialogElement | null>(null);
+  const colorVars = useMemo(() => cssCustomProperties() as React.CSSProperties, []);
 
   const collapse = useCallback(() => setIsExpanded(false), []);
 
@@ -98,6 +100,7 @@ export function PlaygroundPreviewPanel({ studio }: { studio: PlaygroundStudioSta
       className={["force-graph-viewport", isExpanded ? "force-graph-viewport-expanded" : ""].join(
         " ",
       )}
+      style={colorVars}
     >
       <div
         ref={graphPreview.ref}
