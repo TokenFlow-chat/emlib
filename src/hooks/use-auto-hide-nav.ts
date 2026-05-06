@@ -6,6 +6,8 @@ type UseAutoHideNavOptions = {
   topOffset?: number;
 };
 
+const SUPPRESS_AUTO_HIDE_MS = 800;
+
 export function useAutoHideNav({
   hideThreshold = 6,
   showThreshold = 6,
@@ -18,6 +20,8 @@ export function useAutoHideNav({
 
     let frame = 0;
     let lastScrollY = window.scrollY;
+    const suppressAutoHide = { current: false };
+    let suppressTimer: ReturnType<typeof setTimeout> | null = null;
 
     const syncVisibility = () => {
       frame = 0;
@@ -26,7 +30,7 @@ export function useAutoHideNav({
       const delta = nextScrollY - lastScrollY;
       const isNearTop = nextScrollY <= topOffset;
 
-      if (isNearTop) {
+      if (isNearTop || suppressAutoHide.current) {
         setIsVisible(true);
       } else if (delta > hideThreshold) {
         setIsVisible(false);
@@ -42,12 +46,31 @@ export function useAutoHideNav({
       frame = window.requestAnimationFrame(syncVisibility);
     };
 
+    const handleHashChange = () => {
+      suppressAutoHide.current = true;
+      setIsVisible(true);
+
+      if (suppressTimer !== null) {
+        window.clearTimeout(suppressTimer);
+      }
+      suppressTimer = setTimeout(() => {
+        suppressAutoHide.current = false;
+        suppressTimer = null;
+        scheduleSync();
+      }, SUPPRESS_AUTO_HIDE_MS);
+    };
+
     scheduleSync();
     window.addEventListener("scroll", scheduleSync, { passive: true });
+    window.addEventListener("hashchange", handleHashChange);
 
     return () => {
       window.cancelAnimationFrame(frame);
       window.removeEventListener("scroll", scheduleSync);
+      window.removeEventListener("hashchange", handleHashChange);
+      if (suppressTimer !== null) {
+        window.clearTimeout(suppressTimer);
+      }
     };
   }, [hideThreshold, showThreshold, topOffset]);
 

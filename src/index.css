@@ -226,9 +226,10 @@
   }
 
   .force-graph-viewport-expanded {
-    position: relative;
-    width: 100dvw;
-    height: 100dvh;
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
     background:
       linear-gradient(90deg, rgba(52, 80, 93, 0.055) 0.0625rem, transparent 0.0625rem),
       linear-gradient(rgba(52, 80, 93, 0.055) 0.0625rem, transparent 0.0625rem),
@@ -242,7 +243,7 @@
   .force-graph-dialog {
     position: fixed;
     inset: 0;
-    z-index: 100;
+    z-index: 1000;
     width: 100dvw;
     max-width: 100dvw;
     height: 100dvh;
@@ -259,12 +260,8 @@
     backdrop-filter: blur(0.35rem);
   }
 
-  .force-graph-expand-placeholder {
-    display: flex;
-    min-height: 18rem;
-    align-items: center;
-    justify-content: center;
-    padding: 1rem;
+  .force-graph-expand-slot {
+    display: contents;
   }
 
   .force-graph-canvas {
@@ -415,10 +412,6 @@
   .force-graph-viewport {
     height: 24rem;
   }
-
-  .force-graph-viewport-expanded {
-    height: 100dvh;
-  }
 }
 
 @media (max-width: 639px) {
@@ -428,10 +421,6 @@
 
   .force-graph-viewport {
     height: 18rem;
-  }
-
-  .force-graph-viewport-expanded {
-    height: 100dvh;
   }
 
   .force-graph-toolbar {

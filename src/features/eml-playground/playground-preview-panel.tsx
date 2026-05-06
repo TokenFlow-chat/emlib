@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   LuCheck,
   LuCopy,
@@ -16,6 +17,14 @@ import { getTransformCopy } from "@/features/eml-playground/playground-i18n";
 import { AsyncMessage, SegmentedTabs } from "@/features/eml-playground/playground-shared";
 import type { PlaygroundStudioState } from "@/features/eml-playground/use-playground-studio";
 import { useMessages } from "@/i18n";
+
+function useStableGraphRoot() {
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  if (!rootRef.current) {
+    rootRef.current = document.createElement("div");
+  }
+  return rootRef.current;
+}
 
 export function PlaygroundPreviewPanel({ studio }: { studio: PlaygroundStudioState }) {
   const {
@@ -36,7 +45,43 @@ export function PlaygroundPreviewPanel({ studio }: { studio: PlaygroundStudioSta
   const graphStats = diagramPayload.graph?.stats ?? null;
   const showPreviewLoading = graphPreview.isRendering || !graphPreview.isReady;
   const [isExpanded, setIsExpanded] = useState(false);
-  const expandedDialogRef = useRef<HTMLDialogElement | null>(null);
+
+  const graphRoot = useStableGraphRoot();
+  const inPageSlotRef = useRef<HTMLDivElement | null>(null);
+  const dialogRef = useRef<HTMLDialogElement | null>(null);
+
+  const collapse = useCallback(() => setIsExpanded(false), []);
+
+  useEffect(() => {
+    if (diagramPayload.graph) return;
+    setIsExpanded(false);
+  }, [diagramPayload.graph]);
+
+  useLayoutEffect(() => {
+    const slot = inPageSlotRef.current;
+    const dialog = dialogRef.current;
+    if (!slot || !dialog) return;
+
+    if (isExpanded) {
+      if (graphRoot.parentElement === dialog) return;
+      if (graphRoot.parentElement === slot) {
+        dialog.appendChild(graphRoot);
+      }
+
+      try {
+        dialog.showModal();
+      } catch {
+        dialog.setAttribute("open", "");
+      }
+    } else {
+      if (graphRoot.parentElement === dialog) {
+        dialog.close();
+        slot.appendChild(graphRoot);
+      } else if (!graphRoot.parentElement) {
+        slot.appendChild(graphRoot);
+      }
+    }
+  });
 
   useEffect(() => {
     if (!isExpanded) return;
@@ -48,29 +93,9 @@ export function PlaygroundPreviewPanel({ studio }: { studio: PlaygroundStudioSta
     };
   }, [isExpanded]);
 
-  useEffect(() => {
-    const dialog = expandedDialogRef.current;
-    if (!dialog) return;
-
-    if (isExpanded && !dialog.open) {
-      try {
-        dialog.showModal();
-      } catch {
-        dialog.setAttribute("open", "");
-      }
-    } else if (!isExpanded && dialog.open) {
-      dialog.close();
-    }
-  }, [isExpanded]);
-
-  useEffect(() => {
-    if (diagramPayload.graph) return;
-    setIsExpanded(false);
-  }, [diagramPayload.graph]);
-
-  const renderGraphViewport = (expanded: boolean) => (
+  const renderGraphViewport = () => (
     <div
-      className={["force-graph-viewport", expanded ? "force-graph-viewport-expanded" : ""].join(
+      className={["force-graph-viewport", isExpanded ? "force-graph-viewport-expanded" : ""].join(
         " ",
       )}
     >
@@ -95,11 +120,11 @@ export function PlaygroundPreviewPanel({ studio }: { studio: PlaygroundStudioSta
             className="h-7 rounded-full border-[color:var(--line)] bg-white/82 px-2 text-[0.72rem]"
             onClick={() => setIsExpanded((current) => !current)}
             aria-label={
-              expanded ? playground.diagram.collapseButton : playground.diagram.expandButton
+              isExpanded ? playground.diagram.collapseButton : playground.diagram.expandButton
             }
           >
-            {expanded ? <LuMinimize2 className="size-3.5" /> : <LuMaximize2 className="size-3.5" />}
-            {expanded ? playground.diagram.collapseButton : playground.diagram.expandButton}
+            {isExpanded ? <LuMinimize2 className="size-3.5" /> : <LuMaximize2 className="size-3.5" />}
+            {isExpanded ? playground.diagram.collapseButton : playground.diagram.expandButton}
           </Button>
           <Button
             type="button"
@@ -217,13 +242,7 @@ export function PlaygroundPreviewPanel({ studio }: { studio: PlaygroundStudioSta
                 </AsyncMessage>
               </div>
             ) : diagramPayload.graph ? (
-              isExpanded ? (
-                <div className="force-graph-expand-placeholder">
-                  <AsyncMessage>{playground.diagram.expandedHint}</AsyncMessage>
-                </div>
-              ) : (
-                renderGraphViewport(false)
-              )
+              <div ref={inPageSlotRef} className="force-graph-expand-slot" />
             ) : (
               <div className="p-3.5">
                 <AsyncMessage>{playground.diagram.empty}</AsyncMessage>
@@ -266,16 +285,11 @@ export function PlaygroundPreviewPanel({ studio }: { studio: PlaygroundStudioSta
         </div>
       </div>
 
-      {diagramPayload.graph ? (
-        <dialog
-          ref={expandedDialogRef}
-          className="force-graph-dialog"
-          onCancel={() => setIsExpanded(false)}
-          onClose={() => setIsExpanded(false)}
-        >
-          {isExpanded ? renderGraphViewport(true) : null}
-        </dialog>
-      ) : null}
+      <dialog ref={dialogRef} className="force-graph-dialog" onCancel={collapse} onClose={collapse}>
+        {/* graphRoot is appended here imperatively when expanded */}
+      </dialog>
+
+      {createPortal(renderGraphViewport(), graphRoot)}
     </>
   );
 }
