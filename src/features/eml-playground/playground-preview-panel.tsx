@@ -1,5 +1,13 @@
 import { useEffect, useRef, useState } from "react";
-import { LuCheck, LuCopy, LuEye, LuEyeOff, LuFocus, LuMaximize2, LuMinimize2 } from "react-icons/lu";
+import {
+  LuCheck,
+  LuCopy,
+  LuEye,
+  LuEyeOff,
+  LuFocus,
+  LuMaximize2,
+  LuMinimize2,
+} from "react-icons/lu";
 
 import { Button } from "@/components/ui/button";
 import { LoadingMark } from "@/components/ui/loading-mark";
@@ -110,11 +118,7 @@ export function PlaygroundPreviewPanel({ studio }: { studio: PlaygroundStudioSta
             className="h-7 rounded-full border-[color:var(--line)] bg-white/82 px-2 text-[0.72rem]"
             onClick={() => setShowLabels((v) => !v)}
           >
-            {showLabels ? (
-              <LuEye className="size-3.5" />
-            ) : (
-              <LuEyeOff className="size-3.5" />
-            )}
+            {showLabels ? <LuEye className="size-3.5" /> : <LuEyeOff className="size-3.5" />}
             {showLabels ? playground.diagram.labelsOn : playground.diagram.labelsOff}
           </Button>
         </div>
