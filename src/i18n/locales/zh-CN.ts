@@ -3,7 +3,8 @@ import type { MessageDictionary } from "@/i18n/schema";
 export const zhCN = {
   app: {
     title: "EML Playground",
-    metaDescription: "一个前端 EML playground，用来查看论文、emlib lowering 和 D2 SVG 渲染。",
+    metaDescription:
+      "一个前端 EML playground，用来查看论文、emlib lowering、JSON 图协议导出和 3D 力导向图渲染。",
     languageLabel: "语言",
     nav: {
       overview: "概览",
@@ -34,7 +35,7 @@ export const zhCN = {
     titleLead: "One operator for all",
     titleAccent: "Elementary Functions",
     description:
-      "EML 把初等函数简化为一个算子。emlib 实现了表达式的解析、lowering、重写、求值、可视化、合成和训练。",
+      "EML 把初等函数简化为一个算子。emlib 实现了表达式的解析、lowering、重写、求值、图序列化、合成和训练。",
     paperNote: {
       label: "原论文",
       title: "All elementary functions from a single binary operator",
@@ -72,8 +73,8 @@ export const zhCN = {
           text: "通过 emlib 的 reduceTypes / toPureEml，把表达式压到统一核心语法上。",
         },
         {
-          title: "D2 SVG 预览",
-          text: "把 AST 导出成 D2，再直接在浏览器里渲染为 SVG 结构图。",
+          title: "3D 图预览",
+          text: "把 AST 序列化为 emlib 图 JSON 协议，再用交互式 3D 力导向图检查结构。",
         },
       ],
     },
@@ -133,9 +134,9 @@ export const zhCN = {
         },
         {
           title: "Evaluate / Export",
-          text: "做数值校验，并导出 SVG 用的树。",
-          detail: "evaluateLossless, evaluate, exprToD2",
-          useCase: "适合做等价验证、调试和可视化展示。",
+          text: "做数值校验，并把树序列化为协议 JSON。",
+          detail: "evaluateLossless, evaluate, serializeExpr",
+          useCase: "适合做等价验证、调试和图数据集成。",
         },
         {
           title: "Synthesize / Train",
@@ -178,10 +179,15 @@ export const zhCN = {
         compound: "仅复合节点",
         none: "无（完整树）",
       },
-      layoutLabel: "D2 布局",
+      layoutLabel: "3D 布局",
+      layoutOptions: {
+        radial: "径向层级",
+        layered: "纵向层级",
+        free: "自由力导向",
+      },
       previewHintLabel: "预览方式",
       previewHint:
-        "四张结果卡都可以直接送到右侧 SVG 面板，方便对比标准树、纯 EML witness、更短写法和从纯 EML 回升后的可读表达式。",
+        "四张结果卡都可以直接送到右侧 3D 图，方便对比标准树、纯 EML witness、更短写法和从纯 EML 回升后的可读表达式。",
     },
     variables: {
       title: "变量取值",
@@ -252,16 +258,35 @@ export const zhCN = {
     },
     parseError: ({ detail }: { detail: string }) => `表达式暂时无法解析：${detail}`,
     diagram: {
-      eyebrow: "SVG Preview",
+      eyebrow: "3D Graph",
       titles: {
         standard: "Expression Tree",
         pure: "Pure EML Tree",
       },
-      deferredHint: "预览区接近视口后才会异步加载 D2 运行时，避免把首屏 JS 包得过大。",
-      loading: "正在异步加载 D2 并生成 SVG...",
-      empty: "输入表达式后会在这里显示 SVG 结构图。",
+      deferredHint: "预览区接近视口后才会异步加载 3D 图运行时，避免把首屏 JS 包得过大。",
+      loading: "正在异步加载 3D 图运行时...",
+      empty: "输入表达式后会在这里显示 3D 表达式图。",
       renderError: ({ detail }: { detail: string }) => `结构图渲染失败：${detail}`,
-      layoutBadge: ({ layout }: { layout: string }) => `D2 / ${layout}`,
+      layoutBadge: ({ layout }: { layout: string }) => `3D / ${layout}`,
+      fitButton: "适配",
+      selectedNodeTitle: "选中节点",
+      noSelectedNode: "暂未选中节点。",
+      nodeFields: {
+        kind: "类型",
+        depth: "深度",
+        occurrences: "出现次数",
+      },
+      stats: {
+        nodes: ({ value }: { value: number }) => `${value} 节点`,
+        links: ({ value }: { value: number }) => `${value} 边`,
+        depth: ({ value }: { value: number }) => `深度 ${value}`,
+      },
+      legend: [
+        { label: "算子", tone: "operator" },
+        { label: "变量", tone: "variable" },
+        { label: "常量", tone: "constant" },
+        { label: "共享", tone: "shared" },
+      ],
       renderLimitReason: ({
         label,
         nodeCount,
@@ -271,17 +296,16 @@ export const zhCN = {
         nodeCount: string;
         limit: string;
       }) =>
-        `${label} 当前有 ${nodeCount} 个节点，超过前端预览阈值 ${limit}。建议切换到更小的表示再看结构。`,
+        `${label} 当前会序列化出 ${nodeCount} 个图节点，超过前端 3D 预览阈值 ${limit}。建议切换到更小的表示，或使用更强的去重模式再看结构。`,
       invalidExpressionReason: "修正表达式后即可恢复图渲染。",
       previewAriaLabel: ({ mode }: { mode: string }) => `${mode} 图预览`,
     },
-    d2Source: {
-      title: "D2 Source",
+    graphJson: {
+      title: "Graph JSON",
       copyIdle: "复制",
       copySuccess: "已复制",
       copyFailed: "复制失败",
-      description:
-        "这段 D2 文本由 exprToD2 生成，节点按 function / variable / constant 三类可视化。",
+      description: "这份 JSON 由 serializeExpr 生成，遵循 emlib.expr.graph v1 协议。",
     },
     experiments: {
       eyebrow: "Advanced Experiments",
@@ -289,7 +313,7 @@ export const zhCN = {
       title: "合成、压缩与训练实验台",
       description:
         "这里集中展示 packages/emlib 里更偏搜索和优化的接口。它们不会跟随输入实时运行，而是按需启动，保证主 playground 仍然足够顺手。",
-      previewTitle: "D2 结果预览",
+      previewTitle: "3D 结果预览",
       shared: {
         running: "运行中...",
       },

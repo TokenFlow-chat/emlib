@@ -62,7 +62,7 @@ const diagramSources = [
   "shortest",
   "lifted",
 ] as const satisfies readonly DiagramSource[];
-const layoutModes = ["dagre", "elk"] as const satisfies readonly LayoutMode[];
+const layoutModes = ["radial", "layered", "free"] as const satisfies readonly LayoutMode[];
 const dedupModes = ["all", "compound", "none"] as const satisfies readonly DedupMode[];
 const compressionModes = [
   "light",
@@ -76,7 +76,7 @@ const defaultPlaygroundUrlState: PlaygroundUrlState = {
   experimentTab: "compression",
   expression: DEFAULT_EXPRESSION,
   diagramSource: "pure",
-  layoutMode: "dagre",
+  layoutMode: "radial",
   dedupMode: DEFAULT_DEDUP_MODE,
   envValues: {
     x: "0.5",

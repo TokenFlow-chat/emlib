@@ -19,8 +19,8 @@ This repository turns the paper into a reusable TypeScript library, a Bun + Reac
 
 ## What This Repo Includes
 
-- `packages/emlib`: parsing, analysis, lowering, rewriting, evaluation, visualization, and experimental search/training utilities for elementary expressions
-- `src/`: a browser playground for exploring standard ASTs, pure EML forms, D2 diagrams, and selected experiments
+- `packages/emlib`: parsing, analysis, lowering, rewriting, evaluation, JSON graph serialization, and experimental search/training utilities for elementary expressions
+- `src/`: a browser playground for exploring standard ASTs, pure EML forms, 3D force-directed expression graphs, and selected experiments
 - `docs/`: implementation notes and a local copy of the reference paper
 
 The repository is optimized for local Bun workflows, and README claims are intentionally limited to behavior implemented in code and covered by tests.
@@ -63,9 +63,9 @@ import {
   analyzeExpr,
   evaluate,
   evaluateLossless,
-  exprToD2,
   parse,
   reduceTokens,
+  serializeExpr,
   toPureEml,
   toString,
   valueToExpr,
@@ -78,7 +78,7 @@ console.log(toString(toPureEml(expr)));
 console.log(toString(reduceTokens(expr)));
 console.log(evaluate(expr, { x: 0.5, y: 2 }));
 console.log(toString(valueToExpr(evaluateLossless(parse("(1 + 2*i) / (3 - 4*i)")))));
-console.log(exprToD2(expr));
+console.log(serializeExpr(expr));
 ```
 
 For syntax support, API details, and behavior notes, see [`packages/emlib/README.md`](./packages/emlib/README.md).

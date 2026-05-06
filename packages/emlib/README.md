@@ -1,6 +1,6 @@
 # emlib
 
-`emlib` is the TypeScript library inside the EML monorepo. It provides the expression pipeline used by the playground: parse elementary expressions, analyze them, lower them to pure EML, search for shorter mixed forms, evaluate them, export diagrams, and run experimental synthesis or training helpers.
+`emlib` is the TypeScript library inside the EML monorepo. It provides the expression pipeline used by the playground: parse elementary expressions, analyze them, lower them to pure EML, search for shorter mixed forms, evaluate them, serialize expression graphs, and run experimental synthesis or training helpers.
 
 The core operator is:
 
@@ -43,29 +43,47 @@ bun run test
 - `simplifyLosslessValue(value)` prunes exact neutral operations from symbolic lossless leftovers without approximate evaluation
 - `losslessToString(value)` prints a lossless value through the compact expression formatter
 
-### Visualization and analysis
+### Serialization and analysis
 
-- `exprToD2(expr, options?)` exports a D2 expression tree (DAG when deduplication is enabled)
+- `serializeExpr(expr, options?)` exports a renderer-neutral JSON graph using the `emlib.expr.graph` v1 protocol
+- `serializeExprToJson(expr, options?)` returns the same protocol as JSON text
 - `countTokens(expr)`, `countTypes(expr)`, `collectVariables(expr)`, and related helpers are also exported
 - `countUniqueSubtrees(expr)` returns the number of distinct structural subtrees
 - `countTotalNodes(expr)` returns the total node count (tree traversal, no deduplication)
 
-#### `exprToD2` options
+#### `serializeExpr` protocol
 
 ```ts
 type DedupMode = "all" | "compound" | "none";
 
-interface D2ExportOptions {
+interface SerializedExprGraph {
+  protocol: "emlib.expr.graph";
+  version: 1;
+  rootId: string;
+  deduplicate: DedupMode;
+  nodes: SerializedExprNode[];
+  links: SerializedExprLink[];
+  stats: SerializedExprGraphStats;
+}
+```
+
+Nodes include stable ids, labels, expression kinds, roles (`operator`, `variable`, `constant`), arity, depth, structural keys, and occurrence counts. Links include stable ids, `source` / `target`, argument position (`left`, `right`, `value`), parent kind, and optional display labels where order matters.
+
+#### `serializeExpr` options
+
+```ts
+interface SerializeExprOptions {
   nodePrefix?: string; // default: "n"
-  edgeLabels?: boolean; // default: true (affects sub/div/pow edges only)
+  linkPrefix?: string; // default: "e"
+  includeArgumentLabels?: boolean; // default: true
   deduplicate?: boolean | DedupMode; // default: "none"
 }
 ```
 
 - `deduplicate: 'all'` — shares every structurally identical node including leaves
-- `deduplicate: 'compound'` — shares only compound subtrees (>1 node), leaves remain separate
+- `deduplicate: 'compound'` — shares compound subtrees (>1 node), while leaves remain separate unless they are inside a shared compound subtree
 - `deduplicate: 'none'` — renders as a full tree with no sharing
-- Edge labels are omitted for commutative operators (add, mul, eml) and all unary ops.
+- Argument labels are omitted for commutative operators (add, mul) and all unary ops.
 
 ### Experimental APIs
 
@@ -91,10 +109,11 @@ import {
   analyzeExpr,
   evaluate,
   evaluateLossless,
-  exprToD2,
   losslessToString,
   parse,
   reduceTokens,
+  serializeExpr,
+  serializeExprToJson,
   simplifyLosslessValue,
   toPureEml,
   toString,
@@ -112,7 +131,8 @@ console.log(
   losslessToString(simplifyLosslessValue(evaluateLossless(parse("(exp(x)+1)-1"), { x: 0.5 }))),
 );
 console.log(losslessToString(evaluateLossless(parse("exp(-x)-ln(x*y)"), { x: 0.5, y: 2 })));
-console.log(exprToD2(expr));
+console.log(serializeExpr(expr));
+console.log(serializeExprToJson(expr));
 ```
 
 ## Behavior Notes

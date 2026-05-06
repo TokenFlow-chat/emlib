@@ -1,5 +1,4 @@
-import { useEffect, useRef, useState } from "react";
-import { LuCheck, LuCopy } from "react-icons/lu";
+import { LuCheck, LuCopy, LuFocus } from "react-icons/lu";
 
 import { Button } from "@/components/ui/button";
 import { LoadingMark } from "@/components/ui/loading-mark";
@@ -16,31 +15,15 @@ export function PlaygroundPreviewPanel({ studio }: { studio: PlaygroundStudioSta
     layoutMode,
     previewActivation,
     diagramPayload,
-    d2Preview,
+    graphPreview,
+    selectedGraphNode,
     copyState,
-    handleCopyD2,
+    handleCopyGraphJson,
     expressionViews,
   } = studio;
   const playground = useMessages((messages) => messages.playground);
-  const imageRef = useRef<HTMLImageElement | null>(null);
-  const [isImageLoading, setIsImageLoading] = useState(false);
-
-  useEffect(() => {
-    if (!d2Preview.svgUrl) {
-      setIsImageLoading(false);
-      return;
-    }
-
-    setIsImageLoading(true);
-  }, [d2Preview.svgUrl]);
-
-  useEffect(() => {
-    if (!d2Preview.svgUrl || !imageRef.current?.complete) return;
-    setIsImageLoading(false);
-  }, [d2Preview.svgUrl]);
-
-  const showPreviewViewport = d2Preview.isRendering || d2Preview.svgUrl;
-  const showPreviewLoading = d2Preview.isRendering || isImageLoading;
+  const graphStats = diagramPayload.graph?.stats ?? null;
+  const showPreviewLoading = graphPreview.isRendering || !graphPreview.isReady;
 
   return (
     <div ref={previewActivation.ref} className="min-w-0 space-y-2.5 xl:sticky xl:top-5">
@@ -68,53 +51,102 @@ export function PlaygroundPreviewPanel({ studio }: { studio: PlaygroundStudioSta
           />
         </div>
 
-        <div className="diagram-canvas px-3.5 py-3.5">
+        <div className="diagram-canvas">
           {!previewActivation.isActivated && diagramPayload.canRender ? (
-            <AsyncMessage>{playground.diagram.deferredHint}</AsyncMessage>
+            <div className="p-3.5">
+              <AsyncMessage>{playground.diagram.deferredHint}</AsyncMessage>
+            </div>
           ) : diagramPayload.reason ? (
-            <AsyncMessage>{diagramPayload.reason}</AsyncMessage>
-          ) : d2Preview.renderError ? (
-            <AsyncMessage tone="warning">
-              {playground.diagram.renderError({
-                detail: d2Preview.renderError,
-              })}
-            </AsyncMessage>
-          ) : showPreviewViewport ? (
-            <div
-              className={[
-                "d2-viewport rounded-[0.9rem] border border-[color:var(--line)]",
-                showPreviewLoading ? "d2-viewport-loading" : "",
-              ].join(" ")}
-            >
-              {d2Preview.svgUrl ? (
-                <img
-                  ref={imageRef}
-                  src={d2Preview.svgUrl}
-                  alt={playground.diagram.previewAriaLabel({
-                    mode: playground.diagram.eyebrow,
-                  })}
-                  className={[
-                    "d2-preview-image transition-opacity duration-200",
-                    showPreviewLoading ? "opacity-0" : "opacity-100",
-                  ].join(" ")}
-                  onLoad={() => setIsImageLoading(false)}
-                  onError={() => {
-                    setIsImageLoading(false);
-                    d2Preview.handleImageError();
-                  }}
-                />
-              ) : null}
+            <div className="p-3.5">
+              <AsyncMessage>{diagramPayload.reason}</AsyncMessage>
+            </div>
+          ) : graphPreview.renderError ? (
+            <div className="p-3.5">
+              <AsyncMessage tone="warning">
+                {playground.diagram.renderError({
+                  detail: graphPreview.renderError,
+                })}
+              </AsyncMessage>
+            </div>
+          ) : diagramPayload.graph ? (
+            <div className="force-graph-viewport">
+              <div
+                ref={graphPreview.ref}
+                className="force-graph-canvas"
+                aria-label={playground.diagram.previewAriaLabel({
+                  mode: playground.diagram.eyebrow,
+                })}
+              />
               {showPreviewLoading ? (
-                <div className="d2-preview-overlay">
+                <div className="force-graph-preview-overlay">
                   <LoadingMark />
                 </div>
               ) : null}
-              {d2Preview.isRendering ? (
+              <div className="force-graph-toolbar">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {graphStats ? (
+                    <>
+                      <span>
+                        {playground.diagram.stats.nodes({ value: graphStats.graphNodes })}
+                      </span>
+                      <span>
+                        {playground.diagram.stats.links({ value: graphStats.graphLinks })}
+                      </span>
+                      <span>{playground.diagram.stats.depth({ value: graphStats.maxDepth })}</span>
+                    </>
+                  ) : null}
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-7 rounded-full border-[color:var(--line)] bg-white/82 px-2 text-[0.72rem]"
+                  onClick={graphPreview.resetCamera}
+                >
+                  <LuFocus className="size-3.5" />
+                  {playground.diagram.fitButton}
+                </Button>
+              </div>
+              <div className="force-graph-node-panel">
+                {selectedGraphNode ? (
+                  <>
+                    <div className="text-[0.68rem] font-semibold tracking-[0.15em] text-[color:var(--ink-soft)] uppercase">
+                      {playground.diagram.selectedNodeTitle}
+                    </div>
+                    <div className="mt-1 truncate font-mono text-sm font-semibold text-[color:var(--ink)]">
+                      {selectedGraphNode.label}
+                    </div>
+                    <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-1 text-[0.72rem] text-[color:var(--ink-soft)]">
+                      <span>{playground.diagram.nodeFields.kind}</span>
+                      <span className="truncate text-right">{selectedGraphNode.kind}</span>
+                      <span>{playground.diagram.nodeFields.depth}</span>
+                      <span className="text-right">{selectedGraphNode.depth}</span>
+                      <span>{playground.diagram.nodeFields.occurrences}</span>
+                      <span className="text-right">{selectedGraphNode.occurrenceCount}</span>
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-xs text-[color:var(--ink-soft)]">
+                    {playground.diagram.noSelectedNode}
+                  </div>
+                )}
+              </div>
+              <div className="force-graph-legend">
+                {playground.diagram.legend.map((item) => (
+                  <span key={item.label} className="inline-flex items-center gap-1.5">
+                    <span className={`force-graph-legend-dot ${item.tone}`} />
+                    {item.label}
+                  </span>
+                ))}
+              </div>
+              {graphPreview.isRendering ? (
                 <div className="sr-only">{playground.diagram.loading}</div>
               ) : null}
             </div>
           ) : (
-            <AsyncMessage>{playground.diagram.empty}</AsyncMessage>
+            <div className="p-3.5">
+              <AsyncMessage>{playground.diagram.empty}</AsyncMessage>
+            </div>
           )}
         </div>
       </div>
@@ -122,7 +154,7 @@ export function PlaygroundPreviewPanel({ studio }: { studio: PlaygroundStudioSta
       <div className="min-w-0 rounded-[1rem] border border-[color:var(--line)] bg-white/78 p-3.5">
         <div className="flex items-center justify-between gap-3">
           <div className="text-xs font-semibold tracking-[0.18em] text-[color:var(--ink-soft)] uppercase">
-            {playground.d2Source.title}
+            {playground.graphJson.title}
           </div>
           <Button
             type="button"
@@ -130,7 +162,7 @@ export function PlaygroundPreviewPanel({ studio }: { studio: PlaygroundStudioSta
             size="sm"
             className="rounded-full border-[color:var(--line)] bg-[color:var(--paper-strong)]"
             onClick={() => {
-              void handleCopyD2();
+              void handleCopyGraphJson();
             }}
           >
             {copyState === "copied" ? (
@@ -139,16 +171,16 @@ export function PlaygroundPreviewPanel({ studio }: { studio: PlaygroundStudioSta
               <LuCopy className="size-4" />
             )}
             {copyState === "copied"
-              ? playground.d2Source.copySuccess
+              ? playground.graphJson.copySuccess
               : copyState === "failed"
-                ? playground.d2Source.copyFailed
-                : playground.d2Source.copyIdle}
+                ? playground.graphJson.copyFailed
+                : playground.graphJson.copyIdle}
           </Button>
         </div>
         <Textarea
           readOnly
-          value={diagramPayload.d2Source}
-          className="mt-2.5 h-12 min-h-0 rounded-[0.85rem] border-[color:var(--line)] bg-[color:var(--paper-strong)] font-mono text-xs leading-5"
+          value={diagramPayload.jsonSource}
+          className="mt-2.5 h-24 min-h-0 rounded-[0.85rem] border-[color:var(--line)] bg-[color:var(--paper-strong)] font-mono text-xs leading-5"
         />
       </div>
     </div>

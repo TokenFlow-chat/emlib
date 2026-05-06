@@ -2,7 +2,7 @@ export const enUS = {
   app: {
     title: "EML Playground",
     metaDescription:
-      "A frontend EML playground for the paper, emlib lowering, and D2 SVG rendering.",
+      "A frontend EML playground for the paper, emlib lowering, JSON graph export, and 3D force-directed rendering.",
     languageLabel: "Language",
     nav: {
       overview: "Overview",
@@ -33,7 +33,7 @@ export const enUS = {
     titleLead: "One operator for all",
     titleAccent: "Elementary Functions",
     description:
-      "EML reduces elementary functions to one operator. emlib implements expression parsing, lowering, rewriting, evaluation, visualization, synthesis, and training.",
+      "EML reduces elementary functions to one operator. emlib implements expression parsing, lowering, rewriting, evaluation, graph serialization, synthesis, and training.",
     paperNote: {
       label: "Original paper",
       title: "All elementary functions from a single binary operator",
@@ -71,8 +71,8 @@ export const enUS = {
           text: "Use emlib's reduceTypes / toPureEml to collapse the expression into a unified core grammar.",
         },
         {
-          title: "D2 SVG Preview",
-          text: "Export the AST into D2 and render it directly in the browser as an SVG structure diagram.",
+          title: "3D Graph Preview",
+          text: "Serialize the AST into the emlib graph JSON protocol and inspect it as an interactive 3D force-directed graph.",
         },
       ],
     },
@@ -132,9 +132,9 @@ export const enUS = {
         },
         {
           title: "Evaluate / Export",
-          text: "Check values and export the tree for SVG.",
-          detail: "evaluateLossless, evaluate, exprToD2",
-          useCase: "Good for equivalence checks, debugging, and visualization.",
+          text: "Check values and serialize the tree as protocol JSON.",
+          detail: "evaluateLossless, evaluate, serializeExpr",
+          useCase: "Good for equivalence checks, debugging, and graph integrations.",
         },
         {
           title: "Synthesize / Train",
@@ -165,7 +165,7 @@ export const enUS = {
       hint: "Supports + - * / ^, exp, ln, sqrt, trigonometric / hyperbolic functions, and e / pi / i.",
     },
     controls: {
-      diagramSourceLabel: "Diagram source",
+      diagramSourceLabel: "Graph source",
       diagramSourceOptions: {
         standard: "Standard AST",
         pure: "Pure EML",
@@ -178,14 +178,19 @@ export const enUS = {
         compound: "Compound only",
         none: "None (full tree)",
       },
-      layoutLabel: "D2 layout",
+      layoutLabel: "3D layout",
+      layoutOptions: {
+        radial: "Radial depth",
+        layered: "Layered depth",
+        free: "Free force",
+      },
       previewHintLabel: "Preview",
       previewHint:
-        "Each result card can be sent to the SVG pane, so you can compare the standard tree, the pure EML witness, the shortened form, and the lifted readable form side by side.",
+        "Each result card can be sent to the 3D graph, so you can compare the standard tree, the pure EML witness, the shortened form, and the lifted readable form side by side.",
     },
     variables: {
       title: "Variable values",
-      description: "Used only for numeric verification and does not affect the structure diagram.",
+      description: "Used only for numeric verification and does not affect the structure graph.",
       empty: "The current expression has no free variables.",
     },
     metrics: {
@@ -255,18 +260,36 @@ export const enUS = {
     },
     parseError: ({ detail }: { detail: string }) => `The expression could not be parsed: ${detail}`,
     diagram: {
-      eyebrow: "SVG Preview",
+      eyebrow: "3D Graph",
       titles: {
         standard: "Expression Tree",
         pure: "Pure EML Tree",
       },
       deferredHint:
-        "The D2 runtime loads only when this area gets close to the viewport, keeping the initial JS bundle smaller.",
-      loading: "Loading the D2 runtime and generating the SVG...",
-      empty: "The SVG structure diagram will appear here after you enter an expression.",
-      renderError: ({ detail }: { detail: string }) =>
-        `The diagram could not be rendered: ${detail}`,
-      layoutBadge: ({ layout }: { layout: string }) => `D2 / ${layout}`,
+        "The 3D graph runtime loads only when this area gets close to the viewport, keeping the initial JS bundle smaller.",
+      loading: "Loading the 3D graph runtime...",
+      empty: "The 3D expression graph will appear here after you enter an expression.",
+      renderError: ({ detail }: { detail: string }) => `The graph could not be rendered: ${detail}`,
+      layoutBadge: ({ layout }: { layout: string }) => `3D / ${layout}`,
+      fitButton: "Fit",
+      selectedNodeTitle: "Selected node",
+      noSelectedNode: "No node selected.",
+      nodeFields: {
+        kind: "Kind",
+        depth: "Depth",
+        occurrences: "Occurrences",
+      },
+      stats: {
+        nodes: ({ value }: { value: number }) => `${value} nodes`,
+        links: ({ value }: { value: number }) => `${value} links`,
+        depth: ({ value }: { value: number }) => `depth ${value}`,
+      },
+      legend: [
+        { label: "operator", tone: "operator" },
+        { label: "variable", tone: "variable" },
+        { label: "constant", tone: "constant" },
+        { label: "shared", tone: "shared" },
+      ],
       renderLimitReason: ({
         label,
         nodeCount,
@@ -276,17 +299,17 @@ export const enUS = {
         nodeCount: string;
         limit: string;
       }) =>
-        `${label} currently has ${nodeCount} nodes, which exceeds the frontend preview threshold of ${limit}. Choose a smaller representation to inspect the structure.`,
-      invalidExpressionReason: "Fix the expression to restore the diagram preview.",
-      previewAriaLabel: ({ mode }: { mode: string }) => `${mode} diagram preview`,
+        `${label} currently serializes to ${nodeCount} graph nodes, which exceeds the frontend 3D preview threshold of ${limit}. Choose a smaller representation or a stronger deduplication mode to inspect the structure.`,
+      invalidExpressionReason: "Fix the expression to restore the graph preview.",
+      previewAriaLabel: ({ mode }: { mode: string }) => `${mode} graph preview`,
     },
-    d2Source: {
-      title: "D2 Source",
+    graphJson: {
+      title: "Graph JSON",
       copyIdle: "Copy",
       copySuccess: "Copied",
       copyFailed: "Copy failed",
       description:
-        "This D2 text is generated by exprToD2. Nodes are visualized as function / variable / constant.",
+        "This JSON is generated by serializeExpr using the emlib.expr.graph v1 protocol.",
     },
     experiments: {
       eyebrow: "Advanced Experiments",
@@ -294,7 +317,7 @@ export const enUS = {
       title: "Synthesis, Compression, And Training",
       description:
         "These demos exercise the newer search-oriented interfaces from packages/emlib. They run only when requested so the main playground stays responsive.",
-      previewTitle: "D2 Result Preview",
+      previewTitle: "3D Result Preview",
       shared: {
         running: "Running...",
       },

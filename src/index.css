@@ -206,55 +206,114 @@
   }
 
   .diagram-canvas {
-    padding: 0.9rem;
     min-height: 34rem;
     background:
-      radial-gradient(circle at top left, rgba(223, 238, 233, 0.48), transparent 26%),
+      linear-gradient(90deg, rgba(52, 80, 93, 0.045) 0.0625rem, transparent 0.0625rem),
+      linear-gradient(rgba(52, 80, 93, 0.045) 0.0625rem, transparent 0.0625rem),
       linear-gradient(180deg, rgba(255, 255, 255, 0.6), rgba(252, 248, 240, 0.72));
+    background-size:
+      1.5rem 1.5rem,
+      1.5rem 1.5rem,
+      auto;
   }
 
-  .d2-viewport {
+  .force-graph-viewport {
     position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
     min-width: 0;
     height: 36rem;
     overflow: hidden;
     background: transparent;
   }
 
-  .d2-viewport-loading {
-    background:
-      linear-gradient(180deg, rgba(255, 255, 255, 0.64), rgba(252, 248, 240, 0.78)),
-      linear-gradient(90deg, rgba(52, 80, 93, 0.03) 0.0625rem, transparent 0.0625rem),
-      linear-gradient(rgba(52, 80, 93, 0.03) 0.0625rem, transparent 0.0625rem);
-    background-size:
-      auto,
-      1.25rem 1.25rem,
-      1.25rem 1.25rem;
-    background-position:
-      0 0,
-      0 0,
-      0 0;
-  }
-
-  .d2-preview-image {
+  .force-graph-canvas {
+    position: absolute;
+    inset: 0;
     min-width: 0;
-    width: 100%;
-    height: 100%;
-    display: block;
-    background: transparent;
-    object-fit: contain;
   }
 
-  .d2-preview-overlay {
+  .force-graph-canvas canvas {
+    display: block;
+  }
+
+  .force-graph-preview-overlay {
     position: absolute;
     inset: 0;
     display: flex;
     align-items: center;
     justify-content: center;
     pointer-events: none;
+    background: rgba(255, 255, 255, 0.42);
+  }
+
+  .force-graph-toolbar,
+  .force-graph-node-panel,
+  .force-graph-legend {
+    position: absolute;
+    z-index: 1;
+    border: 0.0625rem solid rgba(127, 143, 151, 0.28);
+    background: rgba(255, 255, 255, 0.78);
+    box-shadow: 0 0.5rem 1.4rem rgba(43, 64, 75, 0.08);
+    backdrop-filter: blur(0.75rem);
+  }
+
+  .force-graph-toolbar {
+    top: 0.75rem;
+    right: 0.75rem;
+    left: 0.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.65rem;
+    border-radius: 999rem;
+    padding: 0.35rem 0.45rem 0.35rem 0.75rem;
+    font-size: 0.72rem;
+    font-weight: 650;
+    color: var(--ink-soft);
+  }
+
+  .force-graph-node-panel {
+    right: 0.75rem;
+    bottom: 0.75rem;
+    width: min(15rem, calc(100% - 1.5rem));
+    border-radius: 0.8rem;
+    padding: 0.75rem;
+  }
+
+  .force-graph-legend {
+    bottom: 0.75rem;
+    left: 0.75rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem 0.7rem;
+    max-width: min(20rem, calc(100% - 17rem));
+    border-radius: 999rem;
+    padding: 0.45rem 0.7rem;
+    font-size: 0.72rem;
+    font-weight: 650;
+    color: var(--ink-soft);
+  }
+
+  .force-graph-legend-dot {
+    width: 0.55rem;
+    height: 0.55rem;
+    border-radius: 999rem;
+    box-shadow: inset 0 0 0 0.0625rem rgba(16, 24, 39, 0.18);
+  }
+
+  .force-graph-legend-dot.operator {
+    background: #2f7d8c;
+  }
+
+  .force-graph-legend-dot.variable {
+    background: #b9783b;
+  }
+
+  .force-graph-legend-dot.constant {
+    background: #a84f6a;
+  }
+
+  .force-graph-legend-dot.shared {
+    background: #6b5aa6;
   }
 }
 
@@ -271,19 +330,36 @@
     min-height: 26rem;
   }
 
-  .d2-viewport {
+  .force-graph-viewport {
     height: 24rem;
+  }
+
+  .force-graph-legend {
+    max-width: calc(100% - 1.5rem);
+    bottom: 6.5rem;
   }
 }
 
 @media (max-width: 639px) {
   .diagram-canvas {
-    padding: 0.75rem;
     min-height: 20rem;
   }
 
-  .d2-viewport {
+  .force-graph-viewport {
     height: 18rem;
+  }
+
+  .force-graph-toolbar {
+    align-items: flex-start;
+    border-radius: 0.8rem;
+  }
+
+  .force-graph-node-panel {
+    display: none;
+  }
+
+  .force-graph-legend {
+    display: none;
   }
 }
 

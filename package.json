@@ -19,9 +19,9 @@
     "check": "bun lint && bun typecheck && bun test && bun run build"
   },
   "dependencies": {
+    "3d-force-graph": "^1.80.0",
     "@radix-ui/react-label": "^2.1.8",
     "@radix-ui/react-select": "^2.2.6",
-    "@terrastruct/d2": "^0.1.33",
     "bun-plugin-tailwind": "^0.1.2",
     "clsx": "^2.1.1",
     "emlib": "workspace:*",

@@ -11,13 +11,13 @@ import {
 
 export type DiagramMode = "standard" | "pure";
 export type DiagramSource = "standard" | "pure" | "shortest" | "lifted";
-export type LayoutMode = "dagre" | "elk";
+export type LayoutMode = "radial" | "layered" | "free";
 export type CompressionMode = "light" | "medium" | "aggressive";
 export type MasterPresetId = "exp" | "eMinusX" | "ln";
 export type DedupMode = "all" | "compound" | "none";
 
 export const DEFAULT_EXPRESSION = "exp(-x) - ln(x*y)";
-export const PURE_RENDER_LIMIT = 1_000_000;
+export const GRAPH_RENDER_NODE_LIMIT = 3_000;
 export const DEFAULT_SYNTH_TARGET = "ln(x)";
 export const DEFAULT_SYNTH_MAX_LEAVES = 7;
 export const DEFAULT_SYNTH_BEAM_WIDTH = 128;

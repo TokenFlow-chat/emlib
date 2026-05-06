@@ -4,17 +4,18 @@ import {
   compressPureEml,
   createMasterTree,
   evaluate,
-  exprToD2,
   parse,
+  serializeExpr,
   synthesizePureEml,
   toString,
   trainMasterFormula,
   type CompressionLevel,
+  type SerializedExprGraph,
 } from "emlib";
 import { startTransition, useEffect, useMemo, useRef, useState } from "react";
 
 import {
-  PURE_RENDER_LIMIT,
+  GRAPH_RENDER_NODE_LIMIT,
   type CompressionMode,
   type DedupMode,
   type DiagramSource,
@@ -22,7 +23,10 @@ import {
   type MasterPresetId,
 } from "@/features/eml-playground/constants";
 import { getTransformCopy } from "@/features/eml-playground/playground-i18n";
-import { useD2Preview, usePreviewActivation } from "@/features/eml-playground/use-d2-preview";
+import {
+  useForceGraphPreview,
+  usePreviewActivation,
+} from "@/features/eml-playground/use-force-graph-preview";
 import {
   type ExpressionTransform,
   useExpressionAnalysis,
@@ -31,11 +35,7 @@ import {
   readPlaygroundUrlState,
   usePlaygroundUrlSync,
 } from "@/features/eml-playground/use-playground-url-sync";
-import {
-  collectVariables,
-  defaultValueForVariable,
-  withTransparentD2Background,
-} from "@/features/eml-playground/utils";
+import { collectVariables, defaultValueForVariable } from "@/features/eml-playground/utils";
 import { useI18n } from "@/i18n";
 
 export type WorkspaceTab = "analyze" | "compare" | "experiments";
@@ -44,6 +44,13 @@ export type ExperimentTab = "compression" | "synthesis" | "master";
 export type ResultView = {
   key: DiagramSource;
   transform: ExpressionTransform;
+};
+
+export type DiagramPayload = {
+  canRender: boolean;
+  reason: string | null;
+  graph: SerializedExprGraph | null;
+  jsonSource: string;
 };
 
 export type AsyncState<T> =
@@ -152,6 +159,7 @@ export function usePlaygroundStudio() {
   const [diagramSource, setDiagramSource] = useState<DiagramSource>(initialUrlState.diagramSource);
   const [layoutMode, setLayoutMode] = useState<LayoutMode>(initialUrlState.layoutMode);
   const [dedupMode, setDedupMode] = useState<DedupMode>(initialUrlState.dedupMode);
+  const [selectedGraphNodeId, setSelectedGraphNodeId] = useState<string | null>(null);
   const [envValues, setEnvValues] = useState<Record<string, string>>(initialUrlState.envValues);
   const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">("idle");
   const [compressionMode, setCompressionMode] = useState<CompressionMode>(
@@ -296,46 +304,69 @@ export function usePlaygroundStudio() {
 
   const selectedView =
     expressionViews.find((view) => view.key === diagramSource) ?? expressionViews[0];
-  const previewMode = selectedView?.key === "pure" ? "pure" : "standard";
 
-  const diagramPayload = useMemo(() => {
+  const diagramPayload = useMemo<DiagramPayload>(() => {
     if (!analysisState.ok || !selectedView) {
       return {
         canRender: false,
         reason: playgroundMessages.diagram.invalidExpressionReason,
-        d2Source: "",
+        graph: null,
+        jsonSource: "",
       };
     }
 
-    const d2Source = withTransparentD2Background(
-      exprToD2(selectedView.transform.expr, { deduplicate: dedupMode }),
-    );
+    const graph = serializeExpr(selectedView.transform.expr, { deduplicate: dedupMode });
+    const jsonSource = JSON.stringify(graph, null, 2);
 
-    if (selectedView.transform.metrics.tokenCount > PURE_RENDER_LIMIT) {
+    if (graph.stats.graphNodes > GRAPH_RENDER_NODE_LIMIT) {
       return {
         canRender: false,
         reason: playgroundMessages.diagram.renderLimitReason({
           label: getTransformCopy(playgroundMessages, selectedView.key).title,
-          nodeCount: formatNumber(selectedView.transform.metrics.tokenCount),
-          limit: formatNumber(PURE_RENDER_LIMIT),
+          nodeCount: formatNumber(graph.stats.graphNodes),
+          limit: formatNumber(GRAPH_RENDER_NODE_LIMIT),
         }),
-        d2Source,
+        graph,
+        jsonSource,
       };
     }
 
     return {
       canRender: true,
       reason: null,
-      d2Source,
+      graph,
+      jsonSource,
     };
   }, [analysisState, formatNumber, playgroundMessages, selectedView, dedupMode]);
 
-  const d2Preview = useD2Preview({
+  useEffect(() => {
+    if (!diagramPayload.graph) {
+      setSelectedGraphNodeId(null);
+      return;
+    }
+
+    if (
+      selectedGraphNodeId !== null &&
+      diagramPayload.graph.nodes.some((node) => node.id === selectedGraphNodeId)
+    ) {
+      return;
+    }
+
+    setSelectedGraphNodeId(diagramPayload.graph.rootId);
+  }, [diagramPayload.graph, selectedGraphNodeId]);
+
+  const selectedGraphNode = useMemo(() => {
+    if (!diagramPayload.graph || selectedGraphNodeId === null) return null;
+    return diagramPayload.graph.nodes.find((node) => node.id === selectedGraphNodeId) ?? null;
+  }, [diagramPayload.graph, selectedGraphNodeId]);
+
+  const graphPreview = useForceGraphPreview({
     active: previewActivation.isActivated,
     canRender: diagramPayload.canRender,
-    d2Source: diagramPayload.d2Source,
-    diagramMode: previewMode ?? "standard",
+    graph: diagramPayload.graph,
     layoutMode,
+    selectedNodeId: selectedGraphNodeId,
+    onSelectNode: setSelectedGraphNodeId,
   });
 
   const synthTargetState = useMemo(() => {
@@ -355,11 +386,11 @@ export function usePlaygroundStudio() {
     }
   }, [synthTarget]);
 
-  const handleCopyD2 = async () => {
-    if (!diagramPayload.d2Source) return;
+  const handleCopyGraphJson = async () => {
+    if (!diagramPayload.jsonSource) return;
 
     try {
-      await navigator.clipboard.writeText(diagramPayload.d2Source);
+      await navigator.clipboard.writeText(diagramPayload.jsonSource);
       setCopyState("copied");
     } catch {
       setCopyState("failed");
@@ -493,6 +524,9 @@ export function usePlaygroundStudio() {
     setLayoutMode,
     dedupMode,
     setDedupMode,
+    selectedGraphNodeId,
+    setSelectedGraphNodeId,
+    selectedGraphNode,
     envValues,
     setEnvValues,
     copyState,
@@ -516,9 +550,9 @@ export function usePlaygroundStudio() {
     expressionViews,
     selectedView,
     diagramPayload,
-    d2Preview,
+    graphPreview,
     synthTargetState,
-    handleCopyD2,
+    handleCopyGraphJson,
     runCompressionDemo,
     runSynthesisDemo,
     runMasterDemo,

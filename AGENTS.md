@@ -26,7 +26,7 @@ bun run check        # lint -> typecheck -> test -> build (run before PRs)
 
 ```
 eml (root workspace)
-├── src/                   # Bun + React playground (shadcn/ui, Tailwind v4, D2)
+├── src/                   # Bun + React playground (shadcn/ui, Tailwind v4, 3D force graph)
 │   ├── index.html         # HTML entrypoint (Bun build scans *.html)
 │   ├── frontend.tsx       # React entrypoint (loaded from index.html)
 │   └── index.ts           # Bun.serve dev server
@@ -56,10 +56,11 @@ eml (root workspace)
 - Run a specific test file: `bun test packages/emlib/test/basic.test.ts`.
 - `bun run check` includes tests; run it before opening a PR.
 
-## D2 Diagrams
+## Graph Serialization and 3D Diagrams
 
-- The playground renders diagrams with `@terrastruct/d2`. The `emlib` library only exports `exprToD2()` to produce D2 source text; the rendering/rendering cache is handled in the playground app.
-- Diagram rendering runs client-side (WASM). It may be slow on first load.
+- The `emlib` library exports `serializeExpr()` / `serializeExprToJson()` for the renderer-neutral `emlib.expr.graph` v1 JSON protocol.
+- The playground renders that protocol with `3d-force-graph`. Keep renderer-specific styling and runtime management in the playground, not in `packages/emlib`.
+- 3D graph rendering runs client-side with Three.js/WebGL and is lazy-loaded near the preview viewport.
 
 ## emlib Internals
 
@@ -91,9 +92,9 @@ All AST constructors (`num()`, `variable()`, `add()`, `sin()`, `eml()`, etc.) cr
 
 All playground UI lives under `src/features/eml-playground/`. Components (`playground-*.tsx`) are rendered by the corresponding hook (`use-playground-studio.ts` owns all state). The 4-page sections (hero, highlights, summary, playground) load lazily via `LazySection` + `IntersectionObserver`.
 
-### D2 WASM lazy loading
+### 3D graph lazy loading
 
-`useD2Preview` uses `IntersectionObserver` with `280px` `rootMargin` — the `@terrastruct/d2` WASM module only loads when the preview panel is near the viewport. SVGs are sanitized (scripts, event handlers, unsafe hrefs stripped) and served as blob URLs.
+`useForceGraphPreview` uses `IntersectionObserver` with `320px` `rootMargin` — the `3d-force-graph` runtime only loads when the preview panel is near the viewport. The hook owns the graph instance, sizing, force layout, camera reset, and teardown.
 
 ### URL state sync
 

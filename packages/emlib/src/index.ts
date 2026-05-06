@@ -9,6 +9,6 @@ export * from "./parser";
 export * from "./pipeline";
 export * from "./print";
 export * from "./rewrite";
+export * from "./serialize";
 export * from "./synth";
 export * from "./train";
-export * from "./visualize";

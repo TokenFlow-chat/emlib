@@ -11,17 +11,17 @@ import {
 } from "../src/index";
 
 test("createMasterTree produces correct param counts", () => {
-  const d1 = createMasterTree(1);
-  expect(d1.nodeCount).toBe(1);
-  expect(d1.paramCount).toBe(4); // 5*2 - 6 = 4
+  const depth1 = createMasterTree(1);
+  expect(depth1.nodeCount).toBe(1);
+  expect(depth1.paramCount).toBe(4); // 5*2 - 6 = 4
 
-  const d2 = createMasterTree(2);
-  expect(d2.nodeCount).toBe(3);
-  expect(d2.paramCount).toBe(14); // 5*4 - 6 = 14
+  const depth2 = createMasterTree(2);
+  expect(depth2.nodeCount).toBe(3);
+  expect(depth2.paramCount).toBe(14); // 5*4 - 6 = 14
 
-  const d3 = createMasterTree(3);
-  expect(d3.nodeCount).toBe(7);
-  expect(d3.paramCount).toBe(34); // 5*8 - 6 = 34
+  const depth3 = createMasterTree(3);
+  expect(depth3.nodeCount).toBe(7);
+  expect(depth3.paramCount).toBe(34); // 5*8 - 6 = 34
 });
 
 test("master forward evaluates eml(x,1) = exp(x) with depth-1", () => {
