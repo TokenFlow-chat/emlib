@@ -1,26 +1,15 @@
 import type { ConfigOptions } from "3d-force-graph";
 import type { SerializedExprGraph } from "emlib";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Mesh, MeshLambertMaterial, Sprite, TorusGeometry } from "three";
+import { Mesh, Sprite } from "three";
 
 import type { LayoutMode } from "./constants";
 import { toForceGraphData } from "./force-graph-data";
+import { loadForceGraphRuntime } from "./force-graph-runtime";
+import { clearNodeHighlight, highlightSelectedNode } from "./force-graph-selection";
 import type { ExpressionGraphInstance, ForceGraphNode } from "./force-graph-types";
 import { getCreateTextSprite } from "./force-graph-labels";
 import { configureForces, setDagMode } from "./force-graph-layout";
-
-const HIGHLIGHT_MARKER = "__selected_ring__";
-
-type ForceGraphModule = typeof import("3d-force-graph");
-
-let forceGraphModulePromise: Promise<ForceGraphModule> | null = null;
-
-function loadForceGraphRuntime() {
-  if (!forceGraphModulePromise) {
-    forceGraphModulePromise = import("3d-force-graph");
-  }
-  return forceGraphModulePromise;
-}
 
 export function usePreviewActivation<T extends Element>() {
   const [node, setNode] = useState<T | null>(null);
@@ -48,6 +37,24 @@ export function usePreviewActivation<T extends Element>() {
   return { ref, isActivated };
 }
 
+const INSTANCE_CONFIG: ConfigOptions = {
+  controlType: "trackball",
+  rendererConfig: {
+    antialias: true,
+    alpha: true,
+    powerPreference: "default",
+  },
+};
+
+const DAMPING_NORMAL = 0.05;
+const DAMPING_INERTIAL = 0;
+
+type DampingControls = { dynamicDampingFactor: number };
+
+function isRootNode(n: ForceGraphNode): boolean {
+  return n.depth === 0 && Number.isFinite(n.x);
+}
+
 export function useForceGraphPreview({
   active,
   canRender,
@@ -65,7 +72,7 @@ export function useForceGraphPreview({
 }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const instanceRef = useRef<ExpressionGraphInstance | null>(null);
-  const controlsRef = useRef<{ dynamicDampingFactor: number } | null>(null);
+  const controlsRef = useRef<DampingControls | null>(null);
   const onSelectNodeRef = useRef(onSelectNode);
   const prevLayoutModeRef = useRef<LayoutMode | null>(null);
   const selectedNodeIdRef = useRef<string | null>(null);
@@ -106,6 +113,8 @@ export function useForceGraphPreview({
     onSelectNodeRef.current(null);
   }, []);
 
+  // === init instance ===
+
   useEffect(() => {
     if (!active || !canRender || !containerNode) return;
 
@@ -118,19 +127,11 @@ export function useForceGraphPreview({
         const module = await loadForceGraphRuntime();
         if (cancelled || !containerRef.current) return;
 
-        const config: ConfigOptions = {
-          controlType: "trackball",
-          rendererConfig: {
-            antialias: true,
-            alpha: true,
-            powerPreference: "default",
-          },
-        };
         const ForceGraph3D = module.default as unknown as new (
           element: HTMLElement,
           configOptions?: ConfigOptions,
         ) => ExpressionGraphInstance;
-        const instance = new ForceGraph3D(containerRef.current, config);
+        const instance = new ForceGraph3D(containerRef.current, INSTANCE_CONFIG);
         instanceRef.current = instance;
 
         instance
@@ -173,8 +174,8 @@ export function useForceGraphPreview({
 
         instance.renderer().setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
 
-        const controls = instance.controls() as { dynamicDampingFactor: number };
-        controls.dynamicDampingFactor = 0.05;
+        const controls = instance.controls() as DampingControls;
+        controls.dynamicDampingFactor = DAMPING_NORMAL;
         controlsRef.current = controls;
 
         const applySize = () => {
@@ -188,14 +189,12 @@ export function useForceGraphPreview({
         resizeObserver = new ResizeObserver(applySize);
         resizeObserver.observe(containerRef.current);
 
-        const onPointerEnter = () => {
-          if (controlsRef.current) controlsRef.current.dynamicDampingFactor = 0.05;
-        };
-        const onPointerLeave = () => {
-          if (controlsRef.current) controlsRef.current.dynamicDampingFactor = 0;
-        };
-        containerRef.current.addEventListener("pointerenter", onPointerEnter);
-        containerRef.current.addEventListener("pointerleave", onPointerLeave);
+        containerRef.current.addEventListener("pointerenter", () => {
+          if (controlsRef.current) controlsRef.current.dynamicDampingFactor = DAMPING_NORMAL;
+        });
+        containerRef.current.addEventListener("pointerleave", () => {
+          if (controlsRef.current) controlsRef.current.dynamicDampingFactor = DAMPING_INERTIAL;
+        });
 
         prevLayoutModeRef.current = null;
         setIsReady(true);
@@ -218,6 +217,8 @@ export function useForceGraphPreview({
       setIsReady(false);
     };
   }, [active, canRender, containerNode, selectNode, deselectNode]);
+
+  // === graph data ===
 
   useEffect(() => {
     const instance = instanceRef.current;
@@ -244,6 +245,8 @@ export function useForceGraphPreview({
       .graphData(graphData);
   }, [active, canRender, graphData, isReady, layoutMode]);
 
+  // === labels ===
+
   useEffect(() => {
     const instance = instanceRef.current;
     if (!instance || !isReady) return;
@@ -259,6 +262,8 @@ export function useForceGraphPreview({
     }
   }, [isReady, showLabels]);
 
+  // === ring spin ===
+
   useEffect(() => {
     let rafId = 0;
 
@@ -272,6 +277,8 @@ export function useForceGraphPreview({
     return () => cancelAnimationFrame(rafId);
   }, [isReady]);
 
+  // === actions ===
+
   const resetCamera = useCallback(() => {
     instanceRef.current?.zoomToFit(500, 0);
   }, []);
@@ -280,13 +287,9 @@ export function useForceGraphPreview({
     const inst = instanceRef.current;
     if (!inst) return;
 
-    const graphNodes = (inst as ExpressionGraphInstance).graphData() as unknown as {
-      nodes: ForceGraphNode[];
-    };
-    if (!graphNodes?.nodes?.length) return;
-
-    const rootNode = graphNodes.nodes.find((n) => n.depth === 0);
-    if (!rootNode || !Number.isFinite(rootNode.x)) return;
+    const nodes = inst.graphData().nodes;
+    const rootNode = nodes.find(isRootNode);
+    if (!rootNode) return;
 
     selectNode(inst, String(rootNode.id ?? ""));
   }, [selectNode]);
@@ -299,54 +302,4 @@ export function useForceGraphPreview({
     resetCamera,
     focusRootNode,
   };
-}
-
-function highlightSelectedNode(instance: ExpressionGraphInstance, nodeId: string): Mesh | null {
-  const graphNodes = (instance as ExpressionGraphInstance).graphData() as unknown as {
-    nodes: ForceGraphNode[];
-  };
-  const node = graphNodes?.nodes?.find((n) => String(n.id) === nodeId);
-  if (!node) return null;
-
-  const threeObj = (node as any).__threeObj;
-  if (!threeObj) return null;
-
-  clearNodeHighlight(instance, nodeId);
-
-  const nodeVal = typeof node.val === "number" ? node.val : 2;
-  const radius = Math.cbrt(nodeVal) * 4.6;
-  const geo = new TorusGeometry(radius * 1.35, radius * 0.18, 16, 48);
-  const mat = new MeshLambertMaterial({
-    color: 0xf0c040,
-    transparent: true,
-    opacity: 0.85,
-  });
-  const ring = new Mesh(geo, mat);
-  ring.name = HIGHLIGHT_MARKER;
-  ring.rotation.z = Math.PI / 2;
-  threeObj.add(ring);
-  return ring;
-}
-
-function clearNodeHighlight(instance: ExpressionGraphInstance, nodeId: string): void {
-  const graphNodes = (instance as ExpressionGraphInstance).graphData() as unknown as {
-    nodes: ForceGraphNode[];
-  };
-  const node = graphNodes?.nodes?.find((n) => String(n.id) === nodeId);
-  if (!node) return;
-
-  const threeObj = (node as any).__threeObj;
-  if (!threeObj) return;
-
-  const ring = threeObj.getObjectByName(HIGHLIGHT_MARKER);
-  if (!ring) return;
-
-  threeObj.remove(ring);
-  ring.geometry?.dispose();
-  const mat = (ring as Mesh).material;
-  if (Array.isArray(mat)) {
-    for (const m of mat) m.dispose();
-  } else {
-    mat?.dispose();
-  }
 }

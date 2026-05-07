@@ -1,5 +1,6 @@
 import type { ForceGraph3DInstance } from "3d-force-graph";
 import type { SerializedExprLink, SerializedExprNode } from "emlib";
+import type { Object3D } from "three";
 
 export type ForceGraphNode = SerializedExprNode & {
   name: string;
@@ -8,6 +9,8 @@ export type ForceGraphNode = SerializedExprNode & {
   x?: number;
   y?: number;
   z?: number;
+  /** Set by three-forcegraph ThreeDigest at render time. */
+  __threeObj?: Object3D;
 };
 
 export type ForceGraphLink = Omit<SerializedExprLink, "source" | "target"> & {
