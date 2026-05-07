@@ -1,8 +1,7 @@
 import { lazy, Suspense, useEffect, useMemo, useState, type ComponentType } from "react";
 
 import { LazyLoadErrorBoundary } from "@/components/lazy-load-error-boundary";
-import { InfoTip } from "@/components/ui/info-tip";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { PlaygroundPreviewPanel } from "@/features/eml-playground/playground-preview-panel";
 import {
   PlaygroundTabFallback,
@@ -48,25 +47,11 @@ export function PlaygroundStudio() {
 
   return (
     <Card className="paper-card border-[color:var(--line-strong)] py-3.5 sm:py-4.5 gap-0">
-      <CardHeader className="gap-2 border-b border-[color:var(--line)]/70 px-4 pb-3.5 sm:px-5">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="text-[0.6875rem] font-semibold tracking-[0.18em] text-[color:var(--ink-soft)] uppercase">
-            {playground.eyebrow}
-          </div>
-          <div className="text-[0.6875rem] text-[color:var(--ink-soft)]">{playground.badge}</div>
-        </div>
-        <div className="flex items-center justify-between gap-3">
-          <CardTitle className="font-display text-3xl text-[color:var(--ink)]">
-            {playground.title}
-          </CardTitle>
-          <InfoTip label={playground.description} />
-        </div>
-      </CardHeader>
       <CardContent className="px-4 pt-3.5 sm:px-5">
         <div
           className={[
             "grid items-start gap-3.5",
-            showPreviewPanel ? "xl:grid-cols-[minmax(0,0.82fr)_minmax(0,0.98fr)]" : "",
+            showPreviewPanel ? "lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1fr)]" : "",
           ].join(" ")}
         >
           <div className="min-w-0 space-y-3.5">

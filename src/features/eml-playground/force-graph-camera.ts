@@ -1,5 +1,3 @@
-import type { Vector3 } from "three";
-
 import type { ExpressionGraphInstance, ForceGraphNode } from "./force-graph-types";
 
 export function focusNode(instance: ExpressionGraphInstance, node: ForceGraphNode) {
@@ -16,12 +14,4 @@ export function focusNode(instance: ExpressionGraphInstance, node: ForceGraphNod
     { x, y, z },
     800,
   );
-}
-
-export function seedInertiaRotation(instance: ExpressionGraphInstance) {
-  const controls = instance.controls() as { _lastAngle: number; _lastAxis: Vector3 };
-  if (controls._lastAngle === 0) {
-    controls._lastAngle = -0.005;
-    controls._lastAxis.set(0, 1, 0);
-  }
 }

@@ -148,7 +148,6 @@ export const zhCN = {
     },
   },
   playground: {
-    eyebrow: "Expression Playground",
     badge: "解析 · lowering · 缩短 · 精确求值 · 合成 · 训练",
     title: "在线 Playground",
     description:

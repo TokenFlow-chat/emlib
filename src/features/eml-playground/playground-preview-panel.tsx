@@ -31,7 +31,6 @@ export function PlaygroundPreviewPanel({ studio }: { studio: PlaygroundStudioSta
   const {
     diagramSource,
     setDiagramSource,
-    layoutMode,
     previewActivation,
     diagramPayload,
     graphPreview,
@@ -114,7 +113,7 @@ export function PlaygroundPreviewPanel({ studio }: { studio: PlaygroundStudioSta
           <LoadingMark />
         </div>
       ) : null}
-      <div className="force-graph-toolbar">
+      <div className="force-graph-toolbar rounded-full px-2">
         <div className="force-graph-toolbar-actions">
           <Button
             type="button"
@@ -206,19 +205,8 @@ export function PlaygroundPreviewPanel({ studio }: { studio: PlaygroundStudioSta
 
   return (
     <>
-      <div ref={previewActivation.ref} className="min-w-0 space-y-2.5 xl:sticky xl:top-5">
+      <div ref={previewActivation.ref} className="min-w-0 space-y-2.5">
         <div className="diagram-shell overflow-hidden">
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[color:var(--line)] px-3.5 py-3">
-            <div>
-              <div className="text-[0.625rem] font-semibold tracking-[0.18em] text-[color:var(--ink-soft)] uppercase">
-                {playground.diagram.eyebrow}
-              </div>
-            </div>
-            <div className="rounded-full border border-[color:var(--line)] bg-white/80 px-3 py-1 text-xs font-semibold text-[color:var(--ink-soft)]">
-              {playground.diagram.layoutBadge({ layout: layoutMode })}
-            </div>
-          </div>
-
           <div className="border-b border-[color:var(--line)] px-3.5 py-2.5">
             <SegmentedTabs
               value={diagramSource}
@@ -287,7 +275,7 @@ export function PlaygroundPreviewPanel({ studio }: { studio: PlaygroundStudioSta
           <Textarea
             readOnly
             value={diagramPayload.jsonSource}
-            className="mt-2.5 h-20 min-h-0 rounded-[0.85rem] border-[color:var(--line)] bg-[color:var(--paper-strong)] font-mono text-xs leading-5"
+            className="mt-2.5 max-h-20 min-h-0 rounded-[0.85rem] border-[color:var(--line)] bg-[color:var(--paper-strong)] font-mono text-xs leading-5"
           />
         </div>
       </div>

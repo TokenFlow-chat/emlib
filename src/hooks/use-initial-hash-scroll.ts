@@ -14,10 +14,12 @@ export function getTrackedHashId<T extends string>(sectionIds: readonly T[]): T 
 
 export function useInitialHashScroll(sectionIds: readonly string[]) {
   const normalizedIds = useMemo(() => sectionIds.filter((id) => id.length > 0), [sectionIds]);
+  // The first section ID sits at the page top — no scroll restoration needed for it.
+  const firstId = normalizedIds[0] ?? "";
   const idsKey = normalizedIds.join("|");
   const [isRestoring, setIsRestoring] = useState(() => {
     const hashId = getTrackedHashId(normalizedIds);
-    return hashId.length > 0 && hashId !== "overview";
+    return hashId.length > 0 && hashId !== firstId;
   });
 
   useEffect(() => {
@@ -27,7 +29,8 @@ export function useInitialHashScroll(sectionIds: readonly string[]) {
     }
 
     const hashId = getTrackedHashId(normalizedIds);
-    if (!hashId || hashId === "overview") {
+    // Skip restoration when the hash matches the topmost section (already in view).
+    if (!hashId || hashId === firstId) {
       setIsRestoring(false);
       return;
     }
@@ -113,7 +116,7 @@ export function useInitialHashScroll(sectionIds: readonly string[]) {
     markDirty();
 
     return finish;
-  }, [idsKey, normalizedIds]);
+  }, [firstId, idsKey, normalizedIds]);
 
   return { isRestoring };
 }

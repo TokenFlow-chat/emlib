@@ -7,7 +7,14 @@ import { useScrollSectionHash } from "@/hooks/use-scroll-section-hash";
 import { useI18n } from "@/i18n";
 import logoUrl from "@/logo.svg";
 
+// Nav items reflect the current page section order: Playground at the top, then Overview.
 const navItems = [
+  {
+    id: "playground",
+    href: "#playground",
+    key: "playground",
+    icon: LuFlaskConical,
+  },
   { id: "overview", href: "#overview", key: "overview", icon: LuHouse },
   {
     id: "highlights",
@@ -16,12 +23,6 @@ const navItems = [
     icon: LuLightbulb,
   },
   { id: "summary", href: "#summary", key: "summary", icon: LuBookOpen },
-  {
-    id: "playground",
-    href: "#playground",
-    key: "playground",
-    icon: LuFlaskConical,
-  },
 ] as const;
 
 const externalItems = [
@@ -64,7 +65,13 @@ function NavLink({
   );
 }
 
-export function AppNav({ hashSyncEnabled = true, autoHideEnabled = true }: { hashSyncEnabled?: boolean; autoHideEnabled?: boolean }) {
+export function AppNav({
+  hashSyncEnabled = true,
+  autoHideEnabled = true,
+}: {
+  hashSyncEnabled?: boolean;
+  autoHideEnabled?: boolean;
+}) {
   const { messages } = useI18n();
   const { activeId } = useScrollSectionHash(
     navItems.map((item) => item.id),
@@ -81,7 +88,7 @@ export function AppNav({ hashSyncEnabled = true, autoHideEnabled = true }: { has
       <div className="app-nav-shell mx-auto max-w-370">
         <div className="app-nav flex flex-col gap-3 px-3 py-3 sm:px-4 lg:flex-row lg:items-center lg:justify-between">
           <a
-            href="#overview"
+            href="#playground"
             className="inline-flex min-h-10 items-center gap-3 text-[color:var(--ink)] no-underline"
           >
             <img

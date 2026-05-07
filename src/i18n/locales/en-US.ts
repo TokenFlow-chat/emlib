@@ -147,7 +147,6 @@ export const enUS = {
     },
   },
   playground: {
-    eyebrow: "Expression Playground",
     badge: "parse · lower · shorten · exact · synth · train",
     title: "Interactive Playground",
     description:

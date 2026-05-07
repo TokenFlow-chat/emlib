@@ -78,7 +78,7 @@ export default function PlaygroundAnalyzeTab({ studio }: { studio: PlaygroundStu
             id="expression-input"
             value={expression}
             onChange={(event) => setExpression(event.target.value)}
-            className="min-h-22 resize-y rounded-[0.85rem] border-[color:var(--line)] bg-white/88 font-mono text-sm leading-5"
+            className="min-h-0 resize-y rounded-[0.85rem] border-[color:var(--line)] bg-white/88 font-mono text-sm leading-5"
             placeholder={playground.expression.placeholder}
           />
         </div>

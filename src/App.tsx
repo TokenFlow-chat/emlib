@@ -20,7 +20,8 @@ const loadHeroPanel = () => import("@/features/eml-playground/hero-panel");
 const loadHighlightsGrid = () => import("@/features/eml-playground/highlights-grid");
 const loadSummaryPanels = () => import("@/features/eml-playground/summary-panels");
 const loadPlaygroundStudio = () => import("@/features/eml-playground/playground-studio");
-const sectionIds = ["overview", "highlights", "summary", "playground"] as const;
+// Playground is the top section — eager-loaded and always visible first.
+const sectionIds = ["playground", "overview", "highlights", "summary"] as const;
 
 export function App() {
   const initialHashId = useRef(getTrackedHashId(sectionIds)).current;
@@ -30,11 +31,19 @@ export function App() {
   return (
     <main className="relative overflow-x-clip">
       <AppNav hashSyncEnabled={!isRestoring} autoHideEnabled={!isRestoring} />
-      <section className="mx-auto flex min-h-screen w-full max-w-370 flex-col gap-5 px-3 pb-6 pt-4 sm:px-4 sm:pb-8 sm:pt-5 lg:gap-6 lg:px-6 lg:pb-10 lg:pt-6">
+      <section className="mx-auto flex min-h-screen w-full max-w-370 flex-col gap-5 px-3 pb-6 pt-3 sm:px-4 sm:pb-8 sm:pt-4 lg:gap-6 lg:px-6 lg:pb-10 lg:pt-5">
+        <section id="playground" className="scroll-mt-28">
+          <LazySection
+            load={loadPlaygroundStudio}
+            eager
+            fallback={<PlaygroundStudioFallback />}
+            errorFallback={(retry) => <PlaygroundStudioLoadError onRetry={retry} />}
+          />
+        </section>
         <section id="overview" className="scroll-mt-28">
           <LazySection
             load={loadHeroPanel}
-            eager
+            eager={initialHashIndex >= 1}
             fallback={<HeroPanelFallback />}
             errorFallback={(retry) => <HeroPanelLoadError onRetry={retry} />}
           />
@@ -42,7 +51,7 @@ export function App() {
         <section id="highlights" className="scroll-mt-28">
           <LazySection
             load={loadHighlightsGrid}
-            eager={initialHashIndex >= 1}
+            eager={initialHashIndex >= 2}
             fallback={<HighlightsGridFallback />}
             errorFallback={(retry) => <HighlightsGridLoadError onRetry={retry} />}
           />
@@ -50,17 +59,9 @@ export function App() {
         <section id="summary" className="scroll-mt-28">
           <LazySection
             load={loadSummaryPanels}
-            eager={initialHashIndex >= 2}
+            eager={initialHashIndex >= 3}
             fallback={<SummaryPanelsFallback />}
             errorFallback={(retry) => <SummaryPanelsLoadError onRetry={retry} />}
-          />
-        </section>
-        <section id="playground" className="scroll-mt-28">
-          <LazySection
-            load={loadPlaygroundStudio}
-            eager={initialHashIndex >= 3}
-            fallback={<PlaygroundStudioFallback />}
-            errorFallback={(retry) => <PlaygroundStudioLoadError onRetry={retry} />}
           />
         </section>
       </section>

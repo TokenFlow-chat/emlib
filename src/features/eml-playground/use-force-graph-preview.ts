@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Sprite } from "three";
 
 import type { LayoutMode } from "./constants";
-import { focusNode, seedInertiaRotation } from "./force-graph-camera";
+import { focusNode } from "./force-graph-camera";
 import { toForceGraphData } from "./force-graph-data";
 import type { ExpressionGraphInstance } from "./force-graph-types";
 import { getCreateTextSprite } from "./force-graph-labels";
@@ -66,7 +66,6 @@ export function useForceGraphPreview({
   const instanceRef = useRef<ExpressionGraphInstance | null>(null);
   const onSelectNodeRef = useRef(onSelectNode);
   const prevLayoutModeRef = useRef<LayoutMode | null>(null);
-  const hasInitialRotationRef = useRef(false);
   const [containerNode, setContainerNode] = useState<HTMLDivElement | null>(null);
   const [renderError, setRenderError] = useState<string | null>(null);
   const [isRendering, setIsRendering] = useState(false);
@@ -152,8 +151,7 @@ export function useForceGraphPreview({
         instance.renderer().setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
 
         const controls = instance.controls() as { dynamicDampingFactor: number };
-        controls.dynamicDampingFactor = 0.01;
-        hasInitialRotationRef.current = false;
+        controls.dynamicDampingFactor = 0.05;
 
         const applySize = () => {
           if (!containerRef.current) return;
@@ -204,11 +202,6 @@ export function useForceGraphPreview({
       .onEngineStop(() => {
         instance.zoomToFit(300, 0);
         setIsRendering(false);
-
-        if (!hasInitialRotationRef.current) {
-          seedInertiaRotation(instance);
-          hasInitialRotationRef.current = true;
-        }
       })
       .warmupTicks(layoutMode === "free" ? 24 : 32)
       .cooldownTicks(layoutMode === "free" ? 80 : 110)
