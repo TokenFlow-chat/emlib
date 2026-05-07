@@ -1,0 +1,211 @@
+diff --git a/node_modules/.bun/three-forcegraph@1.43.4+7b565cd016fb14f9/node_modules/three-forcegraph/.bun-tag-18d1ca493b22ef7f b/.bun-tag-18d1ca493b22ef7f
+new file mode 100644
+index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
+diff --git a/dist/three-forcegraph.js b/dist/three-forcegraph.js
+index 420855560778d37ed931fdf4e98776e751a7c556..b781309b6fa0b8247d7886a309c163189381c449 100644
+--- a/dist/three-forcegraph.js
++++ b/dist/three-forcegraph.js
+@@ -7529,6 +7529,7 @@ function InsertStackElement(node, body) {
+         //
+ 
+         function layoutTick() {
++          if (!state.layout) return;
+           if (++state.cntTicks > state.cooldownTicks || new Date() - state.startTickTime > state.cooldownTime || isD3Sim && state.d3AlphaMin > 0 && state.d3ForceLayout.alpha() < state.d3AlphaMin) {
+             state.engineRunning = false; // Stop ticking graph
+             state.onEngineStop();
+@@ -7881,8 +7882,10 @@ function InsertStackElement(node, body) {
+       }
+     },
+     stateInit: function stateInit() {
++      var d3Layout = d3ForceSimulation().force('link', d3ForceLink()).force('charge', d3ForceManyBody()).force('center', d3ForceCenter()).force('dagRadial', null).stop();
+       return {
+-        d3ForceLayout: d3ForceSimulation().force('link', d3ForceLink()).force('charge', d3ForceManyBody()).force('center', d3ForceCenter()).force('dagRadial', null).stop(),
++        d3ForceLayout: d3Layout,
++        layout: d3Layout,
+         engineRunning: false
+       };
+     },
+diff --git a/dist/three-forcegraph.mjs b/dist/three-forcegraph.mjs
+index 23ad46caaddca8b39dbc19366eb0182f43db62d1..2444e95bc75ce4a012ab70ec0f6333e17428fb43 100644
+--- a/dist/three-forcegraph.mjs
++++ b/dist/three-forcegraph.mjs
+@@ -1,7 +1,5 @@
+ import { BufferGeometry, Mesh, SphereGeometry, Color, MeshLambertMaterial, BufferAttribute, Line, Group, CylinderGeometry, Matrix4, Box3, CubicBezierCurve3, QuadraticBezierCurve3, LineBasicMaterial, ConeGeometry, TubeGeometry, Vector3 } from 'three';
+ import { forceRadial, forceSimulation, forceLink, forceManyBody, forceCenter } from 'd3-force-3d';
+-import graph from 'ngraph.graph';
+-import forcelayout from 'ngraph.forcelayout';
+ import Kapsule from 'kapsule';
+ import accessorFn from 'accessor-fn';
+ import { min, max } from 'd3-array';
+@@ -421,13 +419,6 @@ var three$1 = window.THREE ? window.THREE // Prefer consumption from global THRE
+   CubicBezierCurve3: CubicBezierCurve3,
+   Box3: Box3
+ };
+-var ngraph = {
+-  graph: graph,
+-  forcelayout: forcelayout
+-};
+-
+-//
+-
+ var DAG_LEVEL_NODE_RATIO = 2;
+ 
+ // support multiple method names for backwards threejs compatibility
+@@ -613,7 +604,6 @@ var ForceGraph = Kapsule({
+     forceEngine: {
+       "default": 'd3'
+     },
+-    // d3 or ngraph
+     d3AlphaMin: {
+       "default": 0
+     },
+@@ -638,17 +628,6 @@ var ForceGraph = Kapsule({
+         state.d3ForceLayout.velocityDecay(velocityDecay);
+       }
+     },
+-    ngraphPhysics: {
+-      "default": {
+-        // defaults from https://github.com/anvaka/ngraph.physics.simulator/blob/master/index.js
+-        timeStep: 20,
+-        gravity: -1.2,
+-        theta: 0.8,
+-        springLength: 30,
+-        springCoefficient: 0.0008,
+-        dragCoefficient: 0.02
+-      }
+-    },
+     warmupTicks: {
+       "default": 0,
+       triggerUpdate: false
+@@ -715,7 +694,6 @@ var ForceGraph = Kapsule({
+       return this;
+     },
+     tickFrame: function tickFrame(state) {
+-      var isD3Sim = state.forceEngine !== 'ngraph';
+       if (state.engineRunning) {
+         layoutTick();
+       }
+@@ -726,11 +704,12 @@ var ForceGraph = Kapsule({
+       //
+ 
+       function layoutTick() {
+-        if (++state.cntTicks > state.cooldownTicks || new Date() - state.startTickTime > state.cooldownTime || isD3Sim && state.d3AlphaMin > 0 && state.d3ForceLayout.alpha() < state.d3AlphaMin) {
++        if (!state.layout) return;
++        if (++state.cntTicks > state.cooldownTicks || new Date() - state.startTickTime > state.cooldownTime || state.d3AlphaMin > 0 && state.d3ForceLayout.alpha() < state.d3AlphaMin) {
+           state.engineRunning = false; // Stop ticking graph
+           state.onEngineStop();
+         } else {
+-          state.layout[isD3Sim ? 'tick' : 'step'](); // Tick it
++          state.layout.tick(); // Tick it
+           state.onEngineTick();
+         }
+         var nodeThreeObjectExtendAccessor = accessorFn(state.nodeThreeObjectExtend);
+@@ -741,7 +720,7 @@ var ForceGraph = Kapsule({
+             node = _ref2[0],
+             obj = _ref2[1];
+           if (!obj) return;
+-          var pos = isD3Sim ? node : state.layout.getNodePosition(node[state.nodeId]);
++          var pos = node;
+           var extendedObj = nodeThreeObjectExtendAccessor(node);
+           if (!state.nodePositionUpdate || !state.nodePositionUpdate(extendedObj ? obj.children[0] : obj, {
+             x: pos.x,
+@@ -765,9 +744,9 @@ var ForceGraph = Kapsule({
+             link = _ref4[0],
+             lineObj = _ref4[1];
+           if (!lineObj) return;
+-          var pos = isD3Sim ? link : state.layout.getLinkPosition(state.layout.graph.getLink(link.source, link.target).id);
+-          var start = pos[isD3Sim ? 'source' : 'from'];
+-          var end = pos[isD3Sim ? 'target' : 'to'];
++          var pos = link;
++          var start = pos['source'];
++          var end = pos['target'];
+           if (!start || !end || !start.hasOwnProperty('x') || !end.hasOwnProperty('x')) return; // skip invalid link
+ 
+           calcLinkCurve(link); // calculate link curve for all links, including custom replaced, so it can be used in directional functionality
+@@ -863,9 +842,9 @@ var ForceGraph = Kapsule({
+         //
+ 
+         function calcLinkCurve(link) {
+-          var pos = isD3Sim ? link : state.layout.getLinkPosition(state.layout.graph.getLink(link.source, link.target).id);
+-          var start = pos[isD3Sim ? 'source' : 'from'];
+-          var end = pos[isD3Sim ? 'target' : 'to'];
++          var pos = link;
++          var start = pos['source'];
++          var end = pos['target'];
+           if (!start || !end || !start.hasOwnProperty('x') || !end.hasOwnProperty('x')) return; // skip invalid link
+ 
+           var curvature = linkCurvatureAccessor(link);
+@@ -908,9 +887,9 @@ var ForceGraph = Kapsule({
+             link = _ref6[0],
+             arrowObj = _ref6[1];
+           if (!arrowObj) return;
+-          var pos = isD3Sim ? link : state.layout.getLinkPosition(state.layout.graph.getLink(link.source, link.target).id);
+-          var start = pos[isD3Sim ? 'source' : 'from'];
+-          var end = pos[isD3Sim ? 'target' : 'to'];
++          var pos = link;
++          var start = pos['source'];
++          var end = pos['target'];
+           if (!start || !end || !start.hasOwnProperty('x') || !end.hasOwnProperty('x')) return; // skip invalid link
+ 
+           var startR = Math.cbrt(Math.max(0, nodeValAccessor(start) || 1)) * state.nodeRelSize;
+@@ -958,9 +937,9 @@ var ForceGraph = Kapsule({
+           var cyclePhotons = photonsObj && photonsObj.children;
+           var singleHopPhotons = link.__singleHopPhotonsObj && link.__singleHopPhotonsObj.children;
+           if ((!singleHopPhotons || !singleHopPhotons.length) && (!cyclePhotons || !cyclePhotons.length)) return;
+-          var pos = isD3Sim ? link : state.layout.getLinkPosition(state.layout.graph.getLink(link.source, link.target).id);
+-          var start = pos[isD3Sim ? 'source' : 'from'];
+-          var end = pos[isD3Sim ? 'target' : 'to'];
++          var pos = link;
++          var start = pos['source'];
++          var end = pos['target'];
+           if (!start || !end || !start.hasOwnProperty('x') || !end.hasOwnProperty('x')) return; // skip invalid link
+ 
+           var particleSpeed = particleSpeedAccessor(link);
+@@ -1078,8 +1057,10 @@ var ForceGraph = Kapsule({
+     }
+   },
+   stateInit: function stateInit() {
++    var d3Layout = forceSimulation().force('link', forceLink()).force('charge', forceManyBody()).force('center', forceCenter()).force('dagRadial', null).stop();
+     return {
+-      d3ForceLayout: forceSimulation().force('link', forceLink()).force('charge', forceManyBody()).force('center', forceCenter()).force('dagRadial', null).stop(),
++      d3ForceLayout: d3Layout,
++      layout: d3Layout,
+       engineRunning: false
+     };
+   },
+@@ -1407,9 +1388,8 @@ var ForceGraph = Kapsule({
+       });
+ 
+       // Feed data to force-directed layout
+-      var isD3Sim = state.forceEngine !== 'ngraph';
+       var layout;
+-      if (isD3Sim) {
++      {
+         // D3-force
+         (layout = state.d3ForceLayout).stop().alpha(1) // re-heat the simulation
+         .numDimensions(state.numDimensions).nodes(state.graphData.nodes);
+@@ -1459,22 +1439,9 @@ var ForceGraph = Kapsule({
+         }).strength(function (node) {
+           return state.dagNodeFilter(node) ? 1 : 0;
+         }) : null);
+-      } else {
+-        // ngraph
+-        var _graph = ngraph.graph();
+-        state.graphData.nodes.forEach(function (node) {
+-          _graph.addNode(node[state.nodeId]);
+-        });
+-        state.graphData.links.forEach(function (link) {
+-          _graph.addLink(link.source, link.target);
+-        });
+-        layout = ngraph.forcelayout(_graph, _objectSpread2({
+-          dimensions: state.numDimensions
+-        }, state.ngraphPhysics));
+-        layout.graph = _graph; // Attach graph reference to layout
+       }
+-      for (var i = 0; i < state.warmupTicks && !(isD3Sim && state.d3AlphaMin > 0 && state.d3ForceLayout.alpha() < state.d3AlphaMin); i++) {
+-        layout[isD3Sim ? "tick" : "step"]();
++      for (var i = 0; i < state.warmupTicks && !(state.d3AlphaMin > 0 && state.d3ForceLayout.alpha() < state.d3AlphaMin); i++) {
++        layout.tick();
+       } // Initial ticks before starting to render
+ 
+       state.layout = layout;

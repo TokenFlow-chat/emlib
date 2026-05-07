@@ -38,6 +38,10 @@
       },
     },
   },
+  "patchedDependencies": {
+    "3d-force-graph@1.80.0": "patches/3d-force-graph@1.80.0.patch",
+    "three-forcegraph@1.43.4": "patches/three-forcegraph@1.43.4.patch",
+  },
   "packages": {
     "3d-force-graph": ["3d-force-graph@1.80.0", "", { "dependencies": { "accessor-fn": "1", "kapsule": "^1.16", "three": ">=0.179 <1", "three-forcegraph": "1", "three-render-objects": "^1.41" } }, "sha512-tzI353gW1nXPpnC7VTa3JjMg+3cp77qOLUFO0vucPTfF+q5R6sQsNsIqVTbRIb7RSypn14nBa4yfkOe9ThxASw=="],
 

@@ -179,8 +179,9 @@ export const enUS = {
       },
       layoutLabel: "3D layout",
       layoutOptions: {
-        radial: "Radial depth",
-        layered: "Layered depth",
+        td: "Top-down",
+        lr: "Left-right",
+        radial: "Radial",
         free: "Free force",
       },
       previewHintLabel: "Preview",
@@ -272,6 +273,7 @@ export const enUS = {
       renderError: ({ detail }: { detail: string }) => `The graph could not be rendered: ${detail}`,
       layoutBadge: ({ layout }: { layout: string }) => `3D / ${layout}`,
       fitButton: "Fit",
+      rootButton: "Root",
       expandButton: "Expand",
       collapseButton: "Exit",
       labelsOn: "Labels",
@@ -295,8 +297,8 @@ export const enUS = {
       ],
       edgeLegend: [
         { label: "value", tone: "value" },
-        { label: "left / x", tone: "left" },
-        { label: "right / y", tone: "right" },
+        { label: "left", tone: "left" },
+        { label: "right", tone: "right" },
       ],
       renderLimitReason: ({
         label,

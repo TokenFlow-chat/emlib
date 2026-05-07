@@ -9,15 +9,21 @@ import type {
 export function setDagMode(instance: ExpressionGraphInstance, layoutMode: LayoutMode) {
   const setMode = instance.dagMode as unknown as (mode: string | null) => ExpressionGraphInstance;
 
-  if (layoutMode === "radial") {
-    setMode("radialout");
-    instance.dagLevelDistance(44);
+  if (layoutMode === "td") {
+    setMode("td");
+    instance.dagLevelDistance(38);
     return;
   }
 
-  if (layoutMode === "layered") {
-    setMode("td");
+  if (layoutMode === "lr") {
+    setMode("lr");
     instance.dagLevelDistance(38);
+    return;
+  }
+
+  if (layoutMode === "radial") {
+    setMode("radialout");
+    instance.dagLevelDistance(44);
     return;
   }
 

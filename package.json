@@ -41,5 +41,9 @@
     "oxfmt": "^0.46.0",
     "oxlint": "^1.63.0",
     "tailwindcss": "^4.2.4"
+  },
+  "patchedDependencies": {
+    "three-forcegraph@1.43.4": "patches/three-forcegraph@1.43.4.patch",
+    "3d-force-graph@1.80.0": "patches/3d-force-graph@1.80.0.patch"
   }
 }

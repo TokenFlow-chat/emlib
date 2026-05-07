@@ -153,10 +153,9 @@ export default function PlaygroundAnalyzeTab({ studio }: { studio: PlaygroundStu
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="td">{playground.controls.layoutOptions.td}</SelectItem>
+                  <SelectItem value="lr">{playground.controls.layoutOptions.lr}</SelectItem>
                   <SelectItem value="radial">{playground.controls.layoutOptions.radial}</SelectItem>
-                  <SelectItem value="layered">
-                    {playground.controls.layoutOptions.layered}
-                  </SelectItem>
                   <SelectItem value="free">{playground.controls.layoutOptions.free}</SelectItem>
                 </SelectContent>
               </Select>

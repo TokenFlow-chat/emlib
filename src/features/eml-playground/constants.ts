@@ -11,7 +11,7 @@ import {
 
 export type DiagramMode = "standard" | "pure";
 export type DiagramSource = "standard" | "pure" | "shortest" | "lifted";
-export type LayoutMode = "radial" | "layered" | "free";
+export type LayoutMode = "td" | "lr" | "radial" | "free";
 export type CompressionMode = "light" | "medium" | "aggressive";
 export type MasterPresetId = "exp" | "eMinusX" | "ln";
 export type DedupMode = "all" | "compound" | "none";

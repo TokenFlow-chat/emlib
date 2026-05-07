@@ -63,7 +63,7 @@ const diagramSources = [
   "shortest",
   "lifted",
 ] as const satisfies readonly DiagramSource[];
-const layoutModes = ["radial", "layered", "free"] as const satisfies readonly LayoutMode[];
+const layoutModes = ["td", "lr", "radial", "free"] as const satisfies readonly LayoutMode[];
 const dedupModes = ["all", "compound", "none"] as const satisfies readonly DedupMode[];
 const compressionModes = [
   "light",

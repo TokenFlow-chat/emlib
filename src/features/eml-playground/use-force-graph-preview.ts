@@ -1,14 +1,15 @@
 import type { ConfigOptions } from "3d-force-graph";
 import type { SerializedExprGraph } from "emlib";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Sprite } from "three";
+import { Mesh, MeshLambertMaterial, Sprite, TorusGeometry } from "three";
 
 import type { LayoutMode } from "./constants";
-import { focusNode } from "./force-graph-camera";
 import { toForceGraphData } from "./force-graph-data";
-import type { ExpressionGraphInstance } from "./force-graph-types";
+import type { ExpressionGraphInstance, ForceGraphNode } from "./force-graph-types";
 import { getCreateTextSprite } from "./force-graph-labels";
 import { configureForces, setDagMode } from "./force-graph-layout";
+
+const HIGHLIGHT_MARKER = "__selected_ring__";
 
 type ForceGraphModule = typeof import("3d-force-graph");
 
@@ -64,8 +65,11 @@ export function useForceGraphPreview({
 }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const instanceRef = useRef<ExpressionGraphInstance | null>(null);
+  const controlsRef = useRef<{ dynamicDampingFactor: number } | null>(null);
   const onSelectNodeRef = useRef(onSelectNode);
   const prevLayoutModeRef = useRef<LayoutMode | null>(null);
+  const selectedNodeIdRef = useRef<string | null>(null);
+  const selectedRingRef = useRef<Mesh | null>(null);
   const [containerNode, setContainerNode] = useState<HTMLDivElement | null>(null);
   const [renderError, setRenderError] = useState<string | null>(null);
   const [isRendering, setIsRendering] = useState(false);
@@ -81,6 +85,26 @@ export function useForceGraphPreview({
   useEffect(() => {
     onSelectNodeRef.current = onSelectNode;
   }, [onSelectNode]);
+
+  const selectNode = useCallback((inst: ExpressionGraphInstance, nodeId: string) => {
+    const prevId = selectedNodeIdRef.current;
+    if (prevId && prevId !== nodeId) {
+      clearNodeHighlight(inst, prevId);
+    }
+    selectedNodeIdRef.current = nodeId;
+    onSelectNodeRef.current(nodeId);
+    selectedRingRef.current = highlightSelectedNode(inst, nodeId);
+  }, []);
+
+  const deselectNode = useCallback((inst: ExpressionGraphInstance) => {
+    const prevId = selectedNodeIdRef.current;
+    if (prevId) {
+      clearNodeHighlight(inst, prevId);
+    }
+    selectedNodeIdRef.current = null;
+    selectedRingRef.current = null;
+    onSelectNodeRef.current(null);
+  }, []);
 
   useEffect(() => {
     if (!active || !canRender || !containerNode) return;
@@ -141,17 +165,17 @@ export function useForceGraphPreview({
           .numDimensions(3)
           .enableNodeDrag(true)
           .onNodeClick((node) => {
-            onSelectNodeRef.current(String(node.id ?? ""));
-            focusNode(instance, node);
+            selectNode(instance, String(node.id ?? ""));
           })
           .onBackgroundClick(() => {
-            onSelectNodeRef.current(null);
+            deselectNode(instance);
           });
 
         instance.renderer().setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
 
         const controls = instance.controls() as { dynamicDampingFactor: number };
         controls.dynamicDampingFactor = 0.05;
+        controlsRef.current = controls;
 
         const applySize = () => {
           if (!containerRef.current) return;
@@ -163,6 +187,16 @@ export function useForceGraphPreview({
         applySize();
         resizeObserver = new ResizeObserver(applySize);
         resizeObserver.observe(containerRef.current);
+
+        const onPointerEnter = () => {
+          if (controlsRef.current) controlsRef.current.dynamicDampingFactor = 0.05;
+        };
+        const onPointerLeave = () => {
+          if (controlsRef.current) controlsRef.current.dynamicDampingFactor = 0;
+        };
+        containerRef.current.addEventListener("pointerenter", onPointerEnter);
+        containerRef.current.addEventListener("pointerleave", onPointerLeave);
+
         prevLayoutModeRef.current = null;
         setIsReady(true);
       } catch (error) {
@@ -180,9 +214,10 @@ export function useForceGraphPreview({
       const inst = instanceRef.current;
       instanceRef.current = null;
       inst?._destructor();
+      controlsRef.current = null;
       setIsReady(false);
     };
-  }, [active, canRender, containerNode]);
+  }, [active, canRender, containerNode, selectNode, deselectNode]);
 
   useEffect(() => {
     const instance = instanceRef.current;
@@ -206,8 +241,7 @@ export function useForceGraphPreview({
       .warmupTicks(layoutMode === "free" ? 24 : 32)
       .cooldownTicks(layoutMode === "free" ? 80 : 110)
       .cooldownTime(2400)
-      .graphData(graphData)
-      .d3ReheatSimulation();
+      .graphData(graphData);
   }, [active, canRender, graphData, isReady, layoutMode]);
 
   useEffect(() => {
@@ -225,9 +259,37 @@ export function useForceGraphPreview({
     }
   }, [isReady, showLabels]);
 
+  useEffect(() => {
+    let rafId = 0;
+
+    const step = () => {
+      rafId = requestAnimationFrame(step);
+      selectedRingRef.current?.rotateX(0.03);
+    };
+
+    rafId = requestAnimationFrame(step);
+
+    return () => cancelAnimationFrame(rafId);
+  }, [isReady]);
+
   const resetCamera = useCallback(() => {
     instanceRef.current?.zoomToFit(500, 0);
   }, []);
+
+  const focusRootNode = useCallback(() => {
+    const inst = instanceRef.current;
+    if (!inst) return;
+
+    const graphNodes = (inst as ExpressionGraphInstance).graphData() as unknown as {
+      nodes: ForceGraphNode[];
+    };
+    if (!graphNodes?.nodes?.length) return;
+
+    const rootNode = graphNodes.nodes.find((n) => n.depth === 0);
+    if (!rootNode || !Number.isFinite(rootNode.x)) return;
+
+    selectNode(inst, String(rootNode.id ?? ""));
+  }, [selectNode]);
 
   return {
     ref: setGraphContainerRef,
@@ -235,5 +297,56 @@ export function useForceGraphPreview({
     isRendering,
     isReady,
     resetCamera,
+    focusRootNode,
   };
+}
+
+function highlightSelectedNode(instance: ExpressionGraphInstance, nodeId: string): Mesh | null {
+  const graphNodes = (instance as ExpressionGraphInstance).graphData() as unknown as {
+    nodes: ForceGraphNode[];
+  };
+  const node = graphNodes?.nodes?.find((n) => String(n.id) === nodeId);
+  if (!node) return null;
+
+  const threeObj = (node as any).__threeObj;
+  if (!threeObj) return null;
+
+  clearNodeHighlight(instance, nodeId);
+
+  const nodeVal = typeof node.val === "number" ? node.val : 2;
+  const radius = Math.cbrt(nodeVal) * 4.6;
+  const geo = new TorusGeometry(radius * 1.35, radius * 0.18, 16, 48);
+  const mat = new MeshLambertMaterial({
+    color: 0xf0c040,
+    transparent: true,
+    opacity: 0.85,
+  });
+  const ring = new Mesh(geo, mat);
+  ring.name = HIGHLIGHT_MARKER;
+  ring.rotation.z = Math.PI / 2;
+  threeObj.add(ring);
+  return ring;
+}
+
+function clearNodeHighlight(instance: ExpressionGraphInstance, nodeId: string): void {
+  const graphNodes = (instance as ExpressionGraphInstance).graphData() as unknown as {
+    nodes: ForceGraphNode[];
+  };
+  const node = graphNodes?.nodes?.find((n) => String(n.id) === nodeId);
+  if (!node) return;
+
+  const threeObj = (node as any).__threeObj;
+  if (!threeObj) return;
+
+  const ring = threeObj.getObjectByName(HIGHLIGHT_MARKER);
+  if (!ring) return;
+
+  threeObj.remove(ring);
+  ring.geometry?.dispose();
+  const mat = (ring as Mesh).material;
+  if (Array.isArray(mat)) {
+    for (const m of mat) m.dispose();
+  } else {
+    mat?.dispose();
+  }
 }

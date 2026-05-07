@@ -8,6 +8,7 @@ import {
   LuFocus,
   LuMaximize2,
   LuMinimize2,
+  LuTarget,
 } from "react-icons/lu";
 
 import { Button } from "@/components/ui/button";
@@ -131,6 +132,17 @@ export function PlaygroundPreviewPanel({ studio }: { studio: PlaygroundStudioSta
               <LuMaximize2 className="size-3.5" />
             )}
             {isExpanded ? playground.diagram.collapseButton : playground.diagram.expandButton}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-7 rounded-full border-[color:var(--line)] bg-white/82 px-2 text-[0.72rem]"
+            onClick={graphPreview.focusRootNode}
+            aria-label={playground.diagram.rootButton}
+          >
+            <LuTarget className="size-3.5" />
+            {playground.diagram.rootButton}
           </Button>
           <Button
             type="button"

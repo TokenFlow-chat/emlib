@@ -180,8 +180,9 @@ export const zhCN = {
       },
       layoutLabel: "3D 布局",
       layoutOptions: {
-        radial: "径向层级",
-        layered: "纵向层级",
+        td: "自上而下",
+        lr: "从左至右",
+        radial: "径向",
         free: "自由力导向",
       },
       previewHintLabel: "预览方式",
@@ -269,6 +270,7 @@ export const zhCN = {
       renderError: ({ detail }: { detail: string }) => `结构图渲染失败：${detail}`,
       layoutBadge: ({ layout }: { layout: string }) => `3D / ${layout}`,
       fitButton: "适配",
+      rootButton: "根节点",
       expandButton: "展开",
       collapseButton: "退出",
       labelsOn: "标签",
@@ -292,8 +294,8 @@ export const zhCN = {
       ],
       edgeLegend: [
         { label: "value", tone: "value" },
-        { label: "left / x", tone: "left" },
-        { label: "right / y", tone: "right" },
+        { label: "left", tone: "left" },
+        { label: "right", tone: "right" },
       ],
       renderLimitReason: ({
         label,
